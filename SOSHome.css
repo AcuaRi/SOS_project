@@ -1,0 +1,81 @@
+.sos-container {
+  background-color: #cce7f3;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+}
+
+.sos-logo {
+  width: 100px;
+  margin-bottom: 20px;
+}
+
+.sos-title {
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.sos-input {
+  width: 250px;
+  padding: 10px;
+  margin: 5px 0;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.sos-button-group {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.sos-login {
+  background-color: #d9d9d9;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+}
+
+.sos-register {
+  background-color: #2e2e2e;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+}
+
+.sos-social-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.sos-social {
+  width: 60px;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.sos-social.google {
+  background-color: white;
+}
+
+.sos-social.kakao {
+  background-color: #fee500;
+}
+
+.sos-social.line {
+  background-color: #00c300;
+  color: white;
+}
+
+.sos-forgot {
+  font-size: 12px;
+  color: #333;
+}
