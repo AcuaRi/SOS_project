@@ -1,0 +1,32 @@
+<!-- templates/result_page.html -->
+<html>
+<head>
+    <title>분석 결과</title>
+</head>
+<body>
+    <!-- <h2> json 형식 문장 (json_format)</h2>
+
+    <pre>{{ json_format }}</pre> -->
+    <h2> STT TEXT</h2>
+    <pre>{{ stt_text }}</pre>
+    
+    <h2> Text Input</h2>
+    <pre>{{ symptom_input }}</pre>
+
+    <h2> final_symptom</h2>
+    <pre>{{ final_symptom }}</pre>
+
+    {% if parsed %}
+        <h3>분석 결과</h3>
+        <ul>
+        {% for key, value in parsed.items() %}
+            <li><b>{{ key }}</b>: {{ value }}</li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p><i>JSON 분석 결과를 추출하지 못했습니다.</i></p>
+    {% endif %}
+
+    <br><a href="/">← 다시 입력</a>
+</body>
+</html>
