@@ -27,3 +27,4 @@ def get_symptom_guide_from_gemini(symptom_text: str) -> str:
     except Exception as e:
         print("[ERROR] Gemini:", e)
         return f"죄송합니다. 서버 오류가 발생했습니다. ({e})"
+# 연결확인용변경
