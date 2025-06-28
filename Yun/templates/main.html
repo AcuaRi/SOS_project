@@ -1,0 +1,104 @@
+<!-- templates/main.html -->
+<!-- <html>
+<head>
+    <title>응급 증상 분석</title>
+</head>
+<body>
+    <h2>증상 분석기</h2>
+    <form action="/analyze" method="post" enctype="multipart/form-data">
+        <label>현재 증상을 입력하세요:</label><br>
+        <textarea name="symptom" rows="4" cols="50" required></textarea><br><br>
+        <input type="file" name="image" accept="image/*"> <br><br>
+        <input type="submit" value="분석 요청">
+    </form>
+</body>
+</html> --> 
+
+<!-- --------------------기존 코드-------------------------- -->
+
+
+<!-- templates/main.html -->
+<html>
+<head>
+    <title>응급 증상 분석</title>
+</head>
+<body>
+    <h2>증상 분석기</h2>
+
+    <form id="symptom-form" action="/analyze" method="post" enctype="multipart/form-data">
+        <label>현재 증상을 입력하세요 (텍스트):</label><br>
+        <textarea name="symptom" rows="4" cols="50"></textarea><br><br>
+
+        <label>또는 마이크로 음성 입력:</label><br>
+        <button type="button" id="start-record">녹음 시작</button>
+        <button type="button" id="stop-record" disabled>녹음 중지</button><br>
+        <audio id="audio-playback" controls></audio>
+        <input type="file" name="audio" id="audio-upload" style="display:none;" /><br><br>
+
+        <label>이미지 파일 (선택):</label><br>
+        <input type="file" name="image" accept="image/*"><br><br>
+
+        <input type="submit" value="분석 요청">
+        <!-- <input type="submit" value="분석 요청" id="submit-button" disabled> -->
+        <!-- 위치정보 추가 -->
+        <input type="hidden" name="latitude" id="latitude">
+        <input type="hidden" name="longitude" id="longitude">
+    </form>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById("start-record").addEventListener("click", async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.start();
+            audioChunks = [];
+
+            mediaRecorder.addEventListener("dataavailable", event => {
+                audioChunks.push(event.data);
+            });
+
+            mediaRecorder.addEventListener("stop", () => {
+                const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                document.getElementById("audio-playback").src = audioUrl;
+
+                // Blob → File → form input 에 넣기
+                const file = new File([audioBlob], "recorded_audio.webm", { type: "audio/webm" });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                document.getElementById("audio-upload").files = dataTransfer.files;
+            });
+
+            document.getElementById("start-record").disabled = true;
+            document.getElementById("stop-record").disabled = false;
+        });
+
+        document.getElementById("stop-record").addEventListener("click", () => {
+            mediaRecorder.stop();
+            document.getElementById("start-record").disabled = false;
+            document.getElementById("stop-record").disabled = true;
+        });
+    </script>
+    <!-- 위치정보 추가 -->
+    <script>
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            document.getElementById("latitude").value = lat;
+            document.getElementById("longitude").value = lng;
+
+            console.log("위치 정보 설정 완료:", lat, lng);
+        },
+        (err) => {
+        console.error("위치 정보 가져오기 실패:", err);
+        }
+    );
+    </script>
+</body>
+</html>
+
