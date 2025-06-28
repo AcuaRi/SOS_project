@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>위치 경로 보기</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- 지도 라이브러리 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+  <style>
+    #map { height: 80vh; width: 100%; }
+    h1 { text-align: center; margin: 10px 0; }
+    .toggle-wrapper {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🧭 구조자의 위치 보기</h1>
+
+  <!-- 지도 -->
+  <div id="map"></div>
+
+  <!-- 지도 스크립트 -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+  <!-- 모듈 스크립트 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+    const firebaseConfig = {{ firebase_Config | tojson }};
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromUid = urlParams.get("from");
+
+    const map = L.map("map").setView([37.5665, 126.9780], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+    let myMarker, fromMarker, routingControl;
+    let myLoc = null, fromLoc = null;
+
+    function getMyLoc() {
+      return myLoc;
+    }
+
+    function tryDrawRoute() {
+      if (myLoc && fromLoc) {
+        if (routingControl) map.removeControl(routingControl);
+        routingControl = L.Routing.control({
+          waypoints: [
+            L.latLng(myLoc.lat, myLoc.lng),
+            L.latLng(fromLoc.lat, fromLoc.lng)
+          ],
+          routeWhileDragging: false
+        }).addTo(map);
+      }
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user || !fromUid) return alert("로그인 상태 또는 요청 정보가 유효하지 않습니다.");
+      const myUid = user.uid;
+
+      // 내 위치 추적
+      navigator.geolocation.watchPosition((position) => {
+        myLoc = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+
+        set(ref(db, `users/${myUid}/location`), myLoc);
+
+        if (!myMarker) {
+          myMarker = L.marker([myLoc.lat, myLoc.lng]).addTo(map).bindPopup("내 위치").openPopup();
+        } else {
+          myMarker.setLatLng([myLoc.lat, myLoc.lng]);
+        }
+      });
+
+      // 요청자 위치 추적
+      const fromRef = ref(db, `users/${fromUid}/location`);
+      onValue(fromRef, (snap) => {
+        fromLoc = snap.val();
+        if (fromLoc) {
+          if (!fromMarker) {
+            fromMarker = L.marker([fromLoc.lat, fromLoc.lng]).addTo(map).bindPopup("요청자 위치");
+          } else {
+            fromMarker.setLatLng([fromLoc.lat, fromLoc.lng]);
+          }
+          tryDrawRoute();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
