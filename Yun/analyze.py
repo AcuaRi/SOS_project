@@ -114,17 +114,25 @@ async def analyze_symptom(
             json_text = match.group()
             parsed = json.loads(json_text)
             #6자리로 만드는 거 
-            # try:
-            #     lat_value = round(float(latitude), 6) if latitude else None
-            #     lng_value = round(float(longitude), 6) if longitude else None
-            # except ValueError:
-            #     lat_value = None
-            #     lng_value = None
+            try:
+                lat_value = round(float(latitude), 6) if latitude else None
+                lng_value = round(float(longitude), 6) if longitude else None
+            except ValueError:
+                lat_value = None
+                lng_value = None
 
             parsed["위치"] = {
-                "latitude": latitude,  # lat_value
-                "longitude": longitude  # lng_value
+                "latitude": lat_value,  # lat_value #latitude
+                "longitude": lng_value  # lng_value #longitude
             }  # 위치정보 추가 
+
+            # 진료과목 코드 정수형으로 변환 
+            if "진료과목 코드" in parsed:
+                try:
+                    parsed["진료과목 코드"] = int(parsed["진료과목 코드"])
+                except ValueError:
+                    pass
+            
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"static/result_{timestamp}.json"
             with open(filename, "w", encoding="utf-8") as f:
