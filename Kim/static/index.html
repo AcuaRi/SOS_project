@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Map Viewer</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <style>
     #map { height: 80vh; width: 100%; }
     #controls { margin: 10px; }
     select { margin-right: 10px; padding: 10px 15px; font-size: 16px; }
     h3 { margin: 10px; }
-
-    /* 긴급 알림 텍스트 */
     #alert {
       display: none;
       font-size: 20px;
@@ -19,8 +19,6 @@
       font-weight: bold;
       margin: 10px;
     }
-
-    /* 깜빡임 효과 */
     @keyframes flash {
       0%, 100% { background-color: transparent; }
       50% { background-color: rgba(255, 0, 0, 0.3); }
@@ -50,22 +48,19 @@
       <option value="999">Layer 999 (red - emergency)</option>
     </select>
   </div>
-
   <div id="alert">❗ 응급 구조 요청 발생 ❗</div>
   <div id="map"></div>
-
-  <!-- 경고 사운드 -->
   <audio id="alertSound" src="https://www.soundjay.com/buttons/sounds/beep-07.mp3" preload="auto"></audio>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script>
     const LAYER_COLORS = {
       1: 'blue', 2: 'red', 3: 'green', 4: 'orange', 5: 'purple',
       6: 'brown', 7: 'pink', 8: 'gray', 9: 'black', 10: 'cyan',
       29: 'yellow', 31: 'darkgreen',
-      999: 'red'  // 🔴 응급 구조 요청 마커
+      999: 'red'
     };
-
     const MAP_CENTER = [37.5665, 126.9780];
     let lastTimestamp = null;
     const layerGroups = {};
@@ -76,10 +71,13 @@
       attribution: 'Map data © OpenStreetMap contributors'
     }).addTo(map);
 
-    // 레이어 그룹 초기화
+    // 클러스터 그룹 초기화
     Object.keys(LAYER_COLORS).forEach(layer => {
       layerGroups[layer] = {
-        markers: L.layerGroup().addTo(map),
+        markers: L.markerClusterGroup({
+          maxClusterRadius: 50,
+          disableClusteringAtZoom: 15
+        }).addTo(map),
         paths: L.layerGroup().addTo(map)
       };
       overlays[`Layer ${layer} (${LAYER_COLORS[layer]} markers)`] = layerGroups[layer].markers;
@@ -88,10 +86,17 @@
 
     L.control.layers(null, overlays).addTo(map);
 
-    // 레이어 데이터 불러오기
+    // 뷰포트 기반 데이터 로드
     async function loadLayerData(layer) {
+      const bounds = map.getBounds();
+      const params = new URLSearchParams({
+        min_lat: bounds.getSouth(),
+        max_lat: bounds.getNorth(),
+        min_lon: bounds.getWest(),
+        max_lon: bounds.getEast()
+      });
       try {
-        const response = await fetch(`/data/${layer}`);
+        const response = await fetch(`/data/${layer}?${params}`);
         if (!response.ok) return;
         const data = await response.json();
 
@@ -109,18 +114,19 @@
                 popupAnchor: [1, -34]
               })
             })
-              .bindPopup(`
-                <b>📍 응급 요청 위치</b><br/>
-                ID: ${m.id}<br/>
-                <button onclick="confirmMarker(${m.id})">✅ 확인</button>`)
+              .bindPopup(isUser ?
+                `<b>📍 응급 요청 위치</b><br/>
+                 ID: ${m.id}<br/>
+                 Name: ${m.name || 'N/A'}<br/>
+                 Phone: ${m.phone || 'N/A'}<br/>
+                 <button onclick="confirmMarker(${m.id})">✅ 확인</button>` :
+                `<b>🏥 병원</b><br/>
+                 ID: ${m.id}<br/>
+                 Name: ${m.name || 'N/A'}<br/>
+                 Phone: ${m.phone || 'N/A'}`
+              )
               .addTo(layerGroups[layer].markers);
           });
-        }
-
-        if (data[`paths_${layer}`]?.length > 0) {
-          L.polyline(data[`paths_${layer}`].map(p => [p.lat, p.lon]), {
-            color: LAYER_COLORS[layer]
-          }).addTo(layerGroups[layer].paths);
         }
       } catch (error) {
         console.error(`Error loading layer ${layer}:`, error);
@@ -135,7 +141,6 @@
         if (data.timestamp !== lastTimestamp) {
           lastTimestamp = data.timestamp;
           loadLayerData(data.layer);
-
           if (Number(data.layer) === 999) {
             triggerEmergencyAlert();
           }
@@ -158,29 +163,41 @@
       setTimeout(() => {
         alertBox.style.display = 'none';
         mapDiv.classList.remove('flash-alert');
-      }, 10000); // 10초 후 자동 종료
+      }, 10000);
     }
 
+    // 마커 확인
     async function confirmMarker(id) {
-  try {
-    const res = await fetch(`/confirm-marker/${id}`, {
-      method: 'DELETE'
-    });
-    if (res.ok) {
-      alert(`마커 ID ${id}가 확인되어 제거되었습니다.`);
-      loadLayerData(999); // 즉시 새로고침
-    } else {
-      const error = await res.json();
-      alert(`삭제 실패: ${error.detail}`);
+      try {
+        const res = await fetch(`/confirm-marker/${id}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          alert(`마커 ID ${id}가 확인되어 제거되었습니다.`);
+          loadLayerData(999);
+        } else {
+          const error = await res.json();
+          alert(`삭제 실패: ${error.detail}`);
+        }
+      } catch (err) {
+        alert("요청 중 오류 발생");
+        console.error(err);
+      }
     }
-  } catch (err) {
-    alert("요청 중 오류 발생");
-    console.error(err);
-  }
-}
 
-    // 처음 모든 레이어 불러오기
-    Object.keys(LAYER_COLORS).forEach(loadLayerData);
+    // 선택된 레이어만 초기 로드
+    const layerSelect = document.getElementById('layerSelect');
+    loadLayerData(layerSelect.value);
+
+    // 레이어 선택 시 데이터 새로고침
+    layerSelect.addEventListener('change', () => {
+      loadLayerData(layerSelect.value);
+    });
+
+    // 지도 이동 시 데이터 새로고침
+    map.on('moveend', () => {
+      loadLayerData(layerSelect.value);
+    });
 
     // 주기적으로 변경 감지
     setInterval(checkReload, 5000);
