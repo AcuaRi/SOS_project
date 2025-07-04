@@ -26,6 +26,14 @@
     #map.flash-alert {
       animation: flash 1s infinite;
     }
+    .emergency-marker {
+      animation: pulse 1.5s infinite; /* 주기 1s -> 1.5s로 완화 */
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
   </style>
 </head>
 <body>
@@ -66,25 +74,29 @@
     const layerGroups = {};
     const overlays = {};
 
-    const map = L.map('map').setView(MAP_CENTER, 6);
+    const map = L.map('map').setView(MAP_CENTER, 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: 'Map data © OpenStreetMap contributors'
     }).addTo(map);
 
-    // クラスタグループ初期化
+    // クラスタグループ 초기화
     Object.keys(LAYER_COLORS).forEach(layer => {
-      layerGroups[layer] = L.markerClusterGroup({
-        maxClusterRadius: 50,
-        disableClusteringAtZoom: 15
-      }).addTo(map);
+      if (layer === '999') {
+        layerGroups[layer] = L.layerGroup().addTo(map);
+      } else {
+        layerGroups[layer] = L.markerClusterGroup({
+          maxClusterRadius: 50,
+          disableClusteringAtZoom: 15
+        }).addTo(map);
+      }
       overlays[`レイヤー ${layer} (${LAYER_COLORS[layer]} マーカー)`] = layerGroups[layer];
     });
 
     L.control.layers(null, overlays).addTo(map);
 
-    // ビューポートベースのデータロード
+    // ビューポートベース의データ로드
     async function loadLayerData(layer) {
-      const bounds = map.getBounds();
+      const bounds = map.getBounds().pad(0.5);
       const params = new URLSearchParams({
         min_lat: bounds.getSouth(),
         max_lat: bounds.getNorth(),
@@ -100,23 +112,31 @@
       try {
         const response = await fetch(`/data/${layer}?${params}`);
         if (!response.ok) {
-          console.warn(`Failed to fetch data for layer ${layer}: ${response.status}`);
+          console.warn(`Failed to fetch data for layer ${layer}: ${response.status} ${response.statusText}`);
           return;
         }
         const data = await response.json();
-        console.log(`Received ${data[`markers_${layer}`]?.length || 0} markers for layer ${layer}`);
+        const markerCount = data[`markers_${layer}`]?.length || 0;
+        console.log(`Received ${markerCount} markers for layer ${layer}`, data[`markers_${layer}`]);
 
         layerGroups[layer].clearLayers();
 
         if (data[`markers_${layer}`]) {
           data[`markers_${layer}`].forEach(m => {
+            if (m.lat == null || m.lon == null || isNaN(m.lat) || isNaN(m.lon) ||
+                m.lat < -90 || m.lat > 90 || m.lon < -180 || m.lon > 180) {
+              console.warn(`Invalid coordinates for marker ID ${m.id}: lat=${m.lat}, lon=${m.lon}`);
+              return;
+            }
             const isUser = Number(layer) === 999;
-            L.marker([m.lat, m.lon], {
+            const marker = L.marker([m.lat, m.lon], {
               icon: L.icon({
                 iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${LAYER_COLORS[layer]}.png`,
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34]
+                iconSize: isUser ? [35, 51] : [25, 41],
+                iconAnchor: isUser ? [17.5, 51] : [12.5, 41], // 소수점으로 정밀 조정
+                popupAnchor: [0, -51],
+                shadowUrl: isUser ? 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png' : null,
+                shadowSize: isUser ? [41, 41] : null
               })
             })
               .bindPopup(isUser ?
@@ -130,48 +150,68 @@
                  名前: ${m.name || 'N/A'}<br/>
                  電話: ${m.phone || 'N/A'}`
               )
-              .addTo(layerGroups[layer]);
+              .on('add', () => {
+                console.log(`Marker ID ${m.id} added to layer ${layer} at [${m.lat}, ${m.lon}]`);
+              });
+            layerGroups[layer].addLayer(marker);
           });
+        } else {
+          console.warn(`No markers received for layer ${layer}`);
         }
       } catch (error) {
         console.error(`レイヤー ${layer} の読み込みエラー:`, error);
       }
     }
 
-    // リロード検知
-    async function checkReload() {
+    // WebSocket 연결 설정
+    let ws = new WebSocket('ws://localhost:8000/ws');
+    ws.onopen = () => {
+      console.log('WebSocket 연결 성공');
+    };
+    ws.onmessage = async (event) => {
       try {
-        const response = await fetch('/reload.txt');
-        const data = await response.json();
+        const data = JSON.parse(event.data);
         if (data.timestamp !== lastTimestamp) {
           lastTimestamp = data.timestamp;
-          loadLayerData(data.layer);
-          if (Number(data.layer) === 999) {
+          const layer = data.layer;
+          const action = data.action;
+          console.log(`WebSocket message received: layer=${layer}, action=${action}`);
+          await loadLayerData(layer);
+          if (Number(layer) === 999 && action === 'add') {
             triggerEmergencyAlert();
+            document.getElementById('layerSelect').value = '999';
+            await loadLayerData(999);
           }
         }
       } catch (error) {
-        console.error('リロードチェックエラー:', error);
+        console.error('WebSocket 메시지 처리 에러:', error);
       }
-    }
+    };
+    ws.onclose = () => {
+      console.log('WebSocket 연결 종료, 3초 후 재연결 시도');
+      setTimeout(() => {
+        ws = new WebSocket('ws://localhost:8000/ws');
+      }, 3000);
+    };
+    ws.onerror = (error) => {
+      console.error('WebSocket 에러:', error);
+    };
 
     // 緊急アラート関数
     function triggerEmergencyAlert() {
       const alertBox = document.getElementById('alert');
       const sound = document.getElementById('alertSound');
       const mapDiv = document.getElementById('map');
-
       alertBox.style.display = 'block';
       sound.play();
       mapDiv.classList.add('flash-alert');
-
       setTimeout(() => {
         alertBox.style.display = 'none';
         mapDiv.classList.remove('flash-alert');
       }, 10000);
     }
 
-    // マーカー確認
+    // マーカー 확인
     async function confirmMarker(id) {
       try {
         const res = await fetch(`/confirm-marker/${id}`, {
@@ -179,7 +219,7 @@
         });
         if (res.ok) {
           alert(`マーカー ID ${id} が確認され、削除されました。`);
-          loadLayerData(999);
+          await loadLayerData(999);
         } else {
           const error = await res.json();
           alert(`削除失敗: ${error.detail}`);
@@ -190,22 +230,19 @@
       }
     }
 
-    // ページロード時に 선택されたレイヤーのデータロード
+    // ページロード時に 모든 레이어 데이터로드
     const layerSelect = document.getElementById('layerSelect');
-    loadLayerData(layerSelect.value);
+    Object.keys(LAYER_COLORS).forEach(layer => loadLayerData(layer));
 
     // レイヤー選択時にデータリフレッシュ
     layerSelect.addEventListener('change', () => {
       loadLayerData(layerSelect.value);
     });
 
-    // マップ移動またはズーム時にデータリフレッシュ
+    // マップ 이동 또는ズーム時にデータリフレッシュ
     map.on('moveend zoomend', () => {
       loadLayerData(layerSelect.value);
     });
-
-    // 定期的に変更検知
-    setInterval(checkReload, 5000);
   </script>
 </body>
 </html>
