@@ -118,12 +118,57 @@ def load_hospital_data_to_db(db: Session, max_rows: int = 10000) -> int:
     print(f"Finished loading {len(df)} hospitals")
     return len(df)
 
+# Load hospital data (limited to 10000 rows, all type codes)
+def load_hospital_data_to_db_jp(db: Session, max_rows: int = 10000) -> int:
+    if not os.path.exists('Kim/data_japan_1.csv'):
+        print("data_japan_1.csv not found")
+        return 0
+    print("Starting to load hospital data")
+
+    df = pd.read_csv('Kim/data_japan_1.csv')
+
+    column_mapping = {
+        'ID': 'hospital_id',
+        '正式名称': 'hospital_name',
+        '機関区分': 'type_code',
+        '所在地座標（経度）': 'coord_x',
+        '所在地座標（緯度）': 'coord_y',
+        '案内用ホームページアドレス': 'phone'
+    }
+    df = df.rename(columns=column_mapping)
+    print(f"Initial rows: {len(df)}")
+    df = df.dropna(subset=['hospital_name', 'type_code', 'coord_x', 'coord_y', 'phone'])
+    print(f"Rows after dropna: {len(df)}")
+    df['type_code'] = pd.to_numeric(df['type_code'], errors='coerce').astype('Int64')
+    df = df.dropna(subset=['type_code'])
+
+    # Limit to max_rows
+    #df = df.head(max_rows)
+
+    print(f"Processing {len(df)} hospitals")
+    db.query(Marker).delete()
+    db.commit()
+    for _, row in df.iterrows():
+        marker = Marker(
+            lat=row['coord_y'],
+            lon=row['coord_x'],
+            layer=int(row['type_code']),  # Convert Int64 to int
+            name=row['hospital_name'],
+            phone=str(row['phone']) if pd.notna(row['phone']) else None
+        )
+        db.add(marker)
+    db.commit()
+    for layer in df['type_code'].unique():
+        notify_data_change(int(layer), db)  # Convert Int64 to int
+    print(f"Finished loading {len(df)} hospitals")
+    return len(df)
+
 # Export data to JSON
 def export_data_to_json(db: Session, layer: int, min_lat: float = None, max_lat: float = None, min_lon: float = None, max_lon: float = None):
     query = db.query(Marker).filter(Marker.layer == layer)
     if min_lat is not None and max_lat is not None and min_lon is not None and max_lon is not None:
         query = query.filter(Marker.lat >= min_lat, Marker.lat <= max_lat, Marker.lon >= min_lon, Marker.lon <= max_lon)
-    markers = query.limit(1000).all()  # 최대 1000개로 제한
+    markers = query.limit(5000).all()  # 최대 1000개로 제한
     data = {
         f"markers_{layer}": [
             {"id": m.id, "lat": m.lat, "lon": m.lon, "name": m.name, "phone": m.phone}
@@ -161,6 +206,11 @@ async def get_data(
 @app.post("/load-hospitals")
 async def load_hospitals(db: Session = Depends(get_db)):
     count = load_hospital_data_to_db(db, max_rows=10000)
+    return {"message": f"Inserted {count} hospitals"}
+
+@app.post("/load-hospitals_jp")
+async def load_hospitals_jp(db: Session = Depends(get_db)):
+    count = load_hospital_data_to_db_jp(db, max_rows=10000)
     return {"message": f"Inserted {count} hospitals"}
 
 @app.post("/nearest-hospitals")

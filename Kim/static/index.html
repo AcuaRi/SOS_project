@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Map Viewer</title>
+  <title>管理者マップビューア</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
@@ -29,26 +29,26 @@
   </style>
 </head>
 <body>
-  <h3>🗺️ Admin Map Viewer</h3>
+  <h3>🗺️ 管理者マップビューア</h3>
   <div id="controls">
-    <label for="layerSelect">Layer: </label>
+    <label for="layerSelect">レイヤー: </label>
     <select id="layerSelect">
-      <option value="1" selected>Layer 1 (blue)</option>
-      <option value="2">Layer 2 (red)</option>
-      <option value="3">Layer 3 (green)</option>
-      <option value="4">Layer 4 (orange)</option>
-      <option value="5">Layer 5 (purple)</option>
-      <option value="6">Layer 6 (brown)</option>
-      <option value="7">Layer 7 (pink)</option>
-      <option value="8">Layer 8 (gray)</option>
-      <option value="9">Layer 9 (black)</option>
-      <option value="10">Layer 10 (cyan)</option>
-      <option value="29">Layer 29 (yellow)</option>
-      <option value="31">Layer 31 (darkgreen)</option>
-      <option value="999">Layer 999 (red - emergency)</option>
+      <option value="1" selected>レイヤー 1 (青)</option>
+      <option value="2">レイヤー 2 (赤)</option>
+      <option value="3">レイヤー 3 (緑)</option>
+      <option value="4">レイヤー 4 (オレンジ)</option>
+      <option value="5">レイヤー 5 (紫)</option>
+      <option value="6">レイヤー 6 (茶)</option>
+      <option value="7">レイヤー 7 (ピンク)</option>
+      <option value="8">レイヤー 8 (灰色)</option>
+      <option value="9">レイヤー 9 (黒)</option>
+      <option value="10">レイヤー 10 (シアン)</option>
+      <option value="29">レイヤー 29 (黄色)</option>
+      <option value="31">レイヤー 31 (濃緑)</option>
+      <option value="999">レイヤー 999 (赤 - 緊急)</option>
     </select>
   </div>
-  <div id="alert">❗ 응급 구조 요청 발생 ❗</div>
+  <div id="alert">❗ 緊急救助要請発生 ❗</div>
   <div id="map"></div>
   <audio id="alertSound" src="https://www.soundjay.com/buttons/sounds/beep-07.mp3" preload="auto"></audio>
 
@@ -61,32 +61,28 @@
       29: 'yellow', 31: 'darkgreen',
       999: 'red'
     };
-    const MAP_CENTER = [37.5665, 126.9780];
+    const MAP_CENTER = [35.6762, 139.6503];
     let lastTimestamp = null;
     const layerGroups = {};
     const overlays = {};
 
-    const map = L.map('map').setView(MAP_CENTER, 7);
+    const map = L.map('map').setView(MAP_CENTER, 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: 'Map data © OpenStreetMap contributors'
     }).addTo(map);
 
-    // 클러스터 그룹 초기화
+    // クラスタグループ初期化
     Object.keys(LAYER_COLORS).forEach(layer => {
-      layerGroups[layer] = {
-        markers: L.markerClusterGroup({
-          maxClusterRadius: 50,
-          disableClusteringAtZoom: 15
-        }).addTo(map),
-        paths: L.layerGroup().addTo(map)
-      };
-      overlays[`Layer ${layer} (${LAYER_COLORS[layer]} markers)`] = layerGroups[layer].markers;
-      overlays[`Layer ${layer} (${LAYER_COLORS[layer]} paths)`] = layerGroups[layer].paths;
+      layerGroups[layer] = L.markerClusterGroup({
+        maxClusterRadius: 50,
+        disableClusteringAtZoom: 15
+      }).addTo(map);
+      overlays[`レイヤー ${layer} (${LAYER_COLORS[layer]} マーカー)`] = layerGroups[layer];
     });
 
     L.control.layers(null, overlays).addTo(map);
 
-    // 뷰포트 기반 데이터 로드
+    // ビューポートベースのデータロード
     async function loadLayerData(layer) {
       const bounds = map.getBounds();
       const params = new URLSearchParams({
@@ -95,13 +91,22 @@
         min_lon: bounds.getWest(),
         max_lon: bounds.getEast()
       });
+      console.log(`Loading layer ${layer} with bounds:`, {
+        min_lat: bounds.getSouth(),
+        max_lat: bounds.getNorth(),
+        min_lon: bounds.getWest(),
+        max_lon: bounds.getEast()
+      });
       try {
         const response = await fetch(`/data/${layer}?${params}`);
-        if (!response.ok) return;
+        if (!response.ok) {
+          console.warn(`Failed to fetch data for layer ${layer}: ${response.status}`);
+          return;
+        }
         const data = await response.json();
+        console.log(`Received ${data[`markers_${layer}`]?.length || 0} markers for layer ${layer}`);
 
-        layerGroups[layer].markers.clearLayers();
-        layerGroups[layer].paths.clearLayers();
+        layerGroups[layer].clearLayers();
 
         if (data[`markers_${layer}`]) {
           data[`markers_${layer}`].forEach(m => {
@@ -115,25 +120,25 @@
               })
             })
               .bindPopup(isUser ?
-                `<b>📍 응급 요청 위치</b><br/>
+                `<b>📍 緊急要請位置</b><br/>
                  ID: ${m.id}<br/>
-                 Name: ${m.name || 'N/A'}<br/>
-                 Phone: ${m.phone || 'N/A'}<br/>
-                 <button onclick="confirmMarker(${m.id})">✅ 확인</button>` :
-                `<b>🏥 병원</b><br/>
+                 名前: ${m.name || 'N/A'}<br/>
+                 電話: ${m.phone || 'N/A'}<br/>
+                 <button onclick="confirmMarker(${m.id})">✅ 確認</button>` :
+                `<b>🏥 病院</b><br/>
                  ID: ${m.id}<br/>
-                 Name: ${m.name || 'N/A'}<br/>
-                 Phone: ${m.phone || 'N/A'}`
+                 名前: ${m.name || 'N/A'}<br/>
+                 電話: ${m.phone || 'N/A'}`
               )
-              .addTo(layerGroups[layer].markers);
+              .addTo(layerGroups[layer]);
           });
         }
       } catch (error) {
-        console.error(`Error loading layer ${layer}:`, error);
+        console.error(`レイヤー ${layer} の読み込みエラー:`, error);
       }
     }
 
-    // reload 감지
+    // リロード検知
     async function checkReload() {
       try {
         const response = await fetch('/reload.txt');
@@ -146,11 +151,11 @@
           }
         }
       } catch (error) {
-        console.error('Error checking reload:', error);
+        console.error('リロードチェックエラー:', error);
       }
     }
 
-    // 긴급 알림 함수
+    // 緊急アラート関数
     function triggerEmergencyAlert() {
       const alertBox = document.getElementById('alert');
       const sound = document.getElementById('alertSound');
@@ -166,40 +171,40 @@
       }, 10000);
     }
 
-    // 마커 확인
+    // マーカー確認
     async function confirmMarker(id) {
       try {
         const res = await fetch(`/confirm-marker/${id}`, {
           method: 'DELETE'
         });
         if (res.ok) {
-          alert(`마커 ID ${id}가 확인되어 제거되었습니다.`);
+          alert(`マーカー ID ${id} が確認され、削除されました。`);
           loadLayerData(999);
         } else {
           const error = await res.json();
-          alert(`삭제 실패: ${error.detail}`);
+          alert(`削除失敗: ${error.detail}`);
         }
       } catch (err) {
-        alert("요청 중 오류 발생");
+        alert("リクエスト中にエラーが発生しました");
         console.error(err);
       }
     }
 
-    // 선택된 레이어만 초기 로드
+    // ページロード時に 선택されたレイヤーのデータロード
     const layerSelect = document.getElementById('layerSelect');
     loadLayerData(layerSelect.value);
 
-    // 레이어 선택 시 데이터 새로고침
+    // レイヤー選択時にデータリフレッシュ
     layerSelect.addEventListener('change', () => {
       loadLayerData(layerSelect.value);
     });
 
-    // 지도 이동 시 데이터 새로고침
-    map.on('moveend', () => {
+    // マップ移動またはズーム時にデータリフレッシュ
+    map.on('moveend zoomend', () => {
       loadLayerData(layerSelect.value);
     });
 
-    // 주기적으로 변경 감지
+    // 定期的に変更検知
     setInterval(checkReload, 5000);
   </script>
 </body>
