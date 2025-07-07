@@ -175,13 +175,15 @@ async def get_nearest_hospitals(
     type_code: int = Body(...),
     lat: float = Body(...),
     lon: float = Body(...),
+    name: str = Body(...),
+    phone: str = Body(...),
     db: Session = Depends(get_db)
 ):
     # 유효성 검사
     if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
         raise HTTPException(status_code=400, detail="Invalid lat/lon values")
     # 마커 추가
-    new_marker = Marker(lat=lat, lon=lon, layer=999)
+    new_marker = Marker(lat=lat, lon=lon, layer=999, name=name, phone=phone)
     db.add(new_marker)
     db.commit()
     await notify_data_change(999, db, action="add")
@@ -194,7 +196,7 @@ async def get_nearest_hospitals(
     )
     nearest = hospitals_sorted[:5]
     return {
-        "input": {"lat": lat, "lon": lon, "type_code": type_code},
+        "input": {"lat": lat, "lon": lon, "type_code": type_code, "name": name, "phone": phone},
         "nearest": [
             {"id": h.id, "lat": h.lat, "lon": h.lon, "name": h.name, "phone": h.phone}
             for h in nearest
