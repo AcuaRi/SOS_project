@@ -11,7 +11,12 @@ import datetime
 from dotenv import load_dotenv
 import os
 from google.cloud import speech
+from fastapi.staticfiles import StaticFiles
+
+from geminiapi import get_symptom_guide_from_gemini
+from fastapi.responses import JSONResponse
 # uvicorn analyze:analyze_app --reload
+
 
 # 환경 설정
 load_dotenv(dotenv_path="c:\\Users\\dbswodyd\\Desktop\\Team project\\API_key.env")
@@ -26,11 +31,11 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "c:\\Users\\dbswodyd\\Desktop\\st
 analyze_app = FastAPI()
 
 # 정적 파일 및 템플릿 설정
-analyze_app.mount("/static", StaticFiles(directory="static"), name="static")
+analyze_app.mount("/templates", StaticFiles(directory="templates"), name="templates")
 templates = Jinja2Templates(directory="templates")
 
 # 프롬프트,과목 코드 리스트 경로 
-prompt_path = "c:\\Users\\dbswodyd\\Desktop\\Team project\\prompt.json"
+prompt_path = "c:\\Users\\dbswodyd\\Desktop\\Team project\\analyze_prompt.json"
 subject_path = "c:\\Users\\dbswodyd\\Desktop\\Team project\\subject_list.txt"
 
 with open(prompt_path, "r", encoding="utf-8") as p:
@@ -47,73 +52,76 @@ base_prompt = "\n".join(analysis_prompt_lines)
 
 # print(base_prompt)
 
+#증상분석 - stt 호출 
+@analyze_app.post("/stt")
+async def speech_to_text(audio: UploadFile = File(...)):
+    audio_bytes = await audio.read()
+    stt_text = ""
+
+    if audio_bytes:
+        client = speech.SpeechClient()
+        recognition_audio = speech.RecognitionAudio(content=audio_bytes)
+        config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
+            sample_rate_hertz=48000,
+            language_code="ko-KR"
+        )
+
+        response = client.recognize(config=config, audio=recognition_audio)
+        for result in response.results:
+            stt_text += result.alternatives[0].transcript
+
+    return JSONResponse(content={"stt_text": stt_text})
+
+# 증상분석 - chat 페이지 열기
 @analyze_app.get("/", response_class=HTMLResponse)
 async def main_page(request: Request):
-    return templates.TemplateResponse("main.html", {"request": request})
+    return templates.TemplateResponse("chat.html", {"request": request})
 
+# 증상분석 - 사용자의 증상 분석
 @analyze_app.post("/analyze", response_class=HTMLResponse)
 async def analyze_symptom(
     request: Request,
-    symptom: str = Form(""),  # 기본값 "" (없을 수도 있으니까)
+    symptom: str = Form(""),
     image: UploadFile = File(None),
-    audio: UploadFile = File(None),  # audio 입력 추가
+    audio: UploadFile = File(None),
     latitude: str = Form(None),
     longitude: str = Form(None)
 ):
-    stt_text = ""
 
-    # ====== Google STT 처리 ======
-    if audio is not None:
-        audio_bytes = await audio.read()
-        
-        if audio_bytes:
-            client = speech.SpeechClient()
-            recognition_audio = speech.RecognitionAudio(content=audio_bytes)
+    final_symptom = symptom
 
-            config = speech.RecognitionConfig(
-                encoding=speech.RecognitionConfig.AudioEncoding.WEBM_OPUS,
-                sample_rate_hertz=48000, 
-                language_code="ko-KR"
-            )
-
-            response = client.recognize(config=config, audio=recognition_audio)
-
-            # 결과 추출
-            for result in response.results:
-                stt_text = result.alternatives[0].transcript
-                # print(f"[STT 결과] {stt_text}")
-
-    # 최종 symptom 텍스트 결정 1순위-입력창 2순위-stt(input이 2개인 경우)
-    final_symptom = symptom if symptom else stt_text
+    # print(f"[사용자 입력 symptom]: {symptom}")
+    # print(f"[STT 결과]: {stt_text}")
     if not final_symptom:
         return HTMLResponse(content="증상 텍스트 또는 음성 파일을 입력해 주세요.", status_code=400)
 
-    # ====== 이미지 처리 ======
     image_data = None
     if image is not None:
         contents = await image.read()
-    if contents:
-        image_data = Image.open(io.BytesIO(contents))
+        if contents:
+            image_data = Image.open(io.BytesIO(contents))
 
-    # ====== 프롬프트 구성 ======
     full_prompt = f"{base_prompt}\n\n사용자 증상: {final_symptom}"
 
-    # Gemini API 호출
-    if image_data:
-        response = model.generate_content([full_prompt, image_data])
-    else:
-        response = model.generate_content([full_prompt])
+    # Gemini 오류 대비용 try-except 추가
+    try:
+        if image_data:
+            response = model.generate_content([full_prompt, image_data])
+        else:
+            response = model.generate_content([full_prompt])
+        json_format = response.text
+    except Exception as e:
+        print("Gemini API 오류:", e)
+        reply_message = "⚠️ 증상 분석 중 오류가 발생했습니다."
+        return JSONResponse(content={"reply": reply_message})  
 
-    json_format = response.text
-
-    # ====== JSON 결과 파싱 및 저장 ======
     match = re.search(r"\{[\s\S]*?\}", json_format)
     parsed = None
     if match:
         try:
             json_text = match.group()
             parsed = json.loads(json_text)
-            #6자리로 만드는 거 
             try:
                 lat_value = round(float(latitude), 6) if latitude else None
                 lng_value = round(float(longitude), 6) if longitude else None
@@ -122,36 +130,32 @@ async def analyze_symptom(
                 lng_value = None
 
             parsed["위치"] = {
-                "latitude": lat_value,  # lat_value #latitude
-                "longitude": lng_value  # lng_value #longitude
-            }  # 위치정보 추가 
+                "latitude": lat_value,
+                "longitude": lng_value
+            }
 
-            # 진료과목 코드 정수형으로 변환 
             if "진료과목 코드" in parsed:
                 try:
                     parsed["진료과목 코드"] = int(parsed["진료과목 코드"])
                 except ValueError:
                     pass
-            
+
+            #json파일 생성         
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"static/result_{timestamp}.json"
             with open(filename, "w", encoding="utf-8") as f:
                 json.dump(parsed, f, ensure_ascii=False, indent=4)
-        except json.JSONDecodeError:
-            parsed = None
 
-    # ====== 결과 화면 반환 ======
-    return templates.TemplateResponse(
-        "result_page.html",
-        {
-            "request": request,
-            "json_format": json_format,
-            "parsed": parsed,
-            "final_symptom": final_symptom,
-            "stt_text": stt_text,  # STT
-            "symptom_input": symptom  # 입력창
-        }
-    )
+            disease_name = parsed.get("의심 질환", final_symptom)
+            guide_text = get_symptom_guide_from_gemini(disease_name)
+            reply_message = guide_text
+
+        except json.JSONDecodeError:
+            reply_message = "Error : 분석된 JSON 형식을 읽을 수 없습니다."
+    else:
+        reply_message = "Error : 분석된 JSON 형식을 찾지 못했어요."
+
+    return JSONResponse(content={"reply": reply_message})  #  항상 stt_text 포함 응답
 
 
 
