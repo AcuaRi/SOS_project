@@ -1,11 +1,10 @@
-# router/map_router.py
-from fastapi import APIRouter, Depends, HTTPException, Body, Query, WebSocket
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, Body, Query, WebSocket, Request
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, Column, Integer, Float, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
-from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import math, json, os, asyncio
 
@@ -21,13 +20,11 @@ def haversine(lat1, lon1, lat2, lon2):
 
     a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
     return R * c
 
 # Database 설정
 DATABASE_URL = "sqlite:///hospital.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -124,14 +121,22 @@ def load_hospital_data_to_db_jp(db: Session, max_rows: int = 10000) -> int:
         db.add(marker)
     db.commit()
     for layer in df['type_code'].unique():
-        asyncio.create_task(notify_data_change(int(layer), db, action="add"))
+        if layer != 999:  # 레이어 999는 사용자 요청 마커로, 초기 로드 시 알림 제외
+            asyncio.create_task(notify_data_change(int(layer), db, action="add"))
     return len(df)
+
+# Jinja2 템플릿 설정
+templates = Jinja2Templates(directory="Kim/templates")
 
 # ────────────────────── 라우터 엔드포인트 ──────────────────────
 
 @router.get("/")
 async def serve_map():
-    return FileResponse("Kim/static/index.html")
+    return FileResponse("Kim/static/index_new.html")
+
+@router.get("/user-map", response_class=HTMLResponse)
+async def serve_user_map(request: Request):
+    return templates.TemplateResponse("user_map.html", {"request": request})
 
 @router.get("/reload.txt")
 async def get_reload():
@@ -148,6 +153,20 @@ async def get_data(
 ):
     export_data_to_json(db, layer, min_lat, max_lat, min_lon, max_lon)
     return FileResponse(f"Kim/static/data_{layer}.json")
+
+@router.get("/marker/{marker_id}")
+async def get_marker(marker_id: int, db: Session = Depends(get_db)):
+    marker = db.query(Marker).filter(Marker.id == marker_id, Marker.layer == 999).first()
+    if not marker:
+        raise HTTPException(status_code=404, detail="Marker not found or not in layer 999")
+    return {
+        "id": marker.id,
+        "lat": marker.lat,
+        "lon": marker.lon,
+        "name": marker.name,
+        "phone": marker.phone,
+        "type_code": 1  # 기본 type_code, 필요 시 동적 설정 가능
+    }
 
 @router.post("/load-hospitals_jp")
 async def load_hospitals_jp(db: Session = Depends(get_db)):
@@ -176,7 +195,14 @@ async def get_nearest_hospitals(
     nearest = hospitals_sorted[:5]
 
     return {
-        "input": {"lat": lat, "lon": lon, "type_code": type_code, "name": name, "phone": phone},
+        "marker_id": new_marker.id,
+        "input": {
+            "lat": 35.6762,
+            "lon": 139.6503,
+            "type_code": 1,
+            "name": "User",
+            "phone": "123-456-7890"
+        },
         "nearest": [
             {"id": h.id, "lat": h.lat, "lon": h.lon, "name": h.name, "phone": h.phone}
             for h in nearest
