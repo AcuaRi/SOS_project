@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>管理者マップビューア</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <style>
+    #map { height: 80vh; width: 100%; }
+    #controls { margin: 10px; }
+    select, button { margin-right: 10px; padding: 10px 15px; font-size: 16px; }
+    h3 { margin: 10px; }
+    #alert {
+      display: none;
+      font-size: 20px;
+      color: red;
+      font-weight: bold;
+      margin: 10px;
+    }
+    @keyframes flash {
+      0%, 100% { background-color: transparent; }
+      50% { background-color: rgba(255, 0, 0, 0.3); }
+    }
+    #map.flash-alert {
+      animation: flash 1s infinite;
+    }
+    .emergency-marker {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <h3>🗺️ 管理者マップビューア</h3>
+  <div id="controls">
+    <label for="layerSelect">レイヤー: </label>
+    <select id="layerSelect">
+      <option value="1" selected>レイヤー 1 (青)</option>
+      <option value="2">レイヤー 2 (赤)</option>
+      <option value="3">レイヤー 3 (緑)</option>
+      <option value="4">レイヤー 4 (オレンジ)</option>
+      <option value="5">レイヤー 5 (紫)</option>
+      <option value="999">レイヤー 999 (赤 - 緊急)</option>
+    </select>
+    <button onclick="loadHospitalData()">병원 데이터 로드</button>
+  </div>
+  <div id="alert">❗ 緊急救助要請発生 ❗</div>
+  <div id="map"></div>
+  <audio id="alertSound" src="https://www.soundjay.com/buttons/sounds/beep-07.mp3" preload="auto"></audio>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script>
+    const LAYER_COLORS = {
+      1: 'blue', 2: 'red', 3: 'green', 4: 'orange', 5: 'purple',
+      999: 'red'
+    };
+    const MAP_CENTER = [35.6762, 139.6503];
+    let lastTimestamp = null;
+    const layerGroups = {};
+    const overlays = {};
+    let allMarkers = {}; // 모든 레이어 데이터를 저장
+
+    const map = L.map('map').setView(MAP_CENTER, 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: 'Map data © OpenStreetMap contributors'
+    }).addTo(map);
+
+    // 클러스터 그룹 초기화
+    Object.keys(LAYER_COLORS).forEach(layer => {
+      if (layer === '999') {
+        layerGroups[layer] = L.layerGroup().addTo(map);
+      } else {
+        layerGroups[layer] = L.markerClusterGroup({
+          maxClusterRadius: 50,
+          disableClusteringAtZoom: 15
+        }).addTo(map);
+      }
+      overlays[`レイヤー ${layer} (${LAYER_COLORS[layer]} マーカー)`] = layerGroups[layer];
+      allMarkers[layer] = []; // 각 레이어에 대한 마커 배열 초기화
+    });
+
+    L.control.layers(null, overlays).addTo(map);
+
+    // 마커 생성 함수
+    function createMarker(m, layer) {
+      if (m.lat == null || m.lon == null || isNaN(m.lat) || isNaN(m.lon) ||
+          m.lat < -90 || m.lat > 90 || m.lon < -180 || m.lon > 180) {
+        console.warn(`Invalid coordinates for marker ID ${m.id}: lat=${m.lat}, lon=${m.lon}`);
+        return null;
+      }
+      const isUser = Number(layer) === 999;
+      const marker = L.marker([m.lat, m.lon], {
+        icon: L.icon({
+          iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${LAYER_COLORS[layer]}.png`,
+          iconSize: isUser ? [35, 51] : [25, 41],
+          iconAnchor: isUser ? [17.5, 51] : [12.5, 41],
+          popupAnchor: [0, -51],
+          shadowUrl: isUser ? 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png' : null,
+          shadowSize: isUser ? [41, 41] : null
+        })
+      })
+        .bindPopup(isUser ?
+          `<b>📍 緊急要請位置</b><br/>
+           ID: ${m.id}<br/>
+           名前: ${m.name || 'N/A'}<br/>
+           電話: ${m.phone || 'N/A'}<br/>
+           <button onclick="confirmMarker(${m.id})">✅ 確認</button>` :
+          `<b>🏥 病院</b><br/>
+           ID: ${m.id}<br/>
+           名前: ${m.name || 'N/A'}<br/>
+           電話: ${m.phone || 'N/A'}`
+        )
+        .on('add', () => {
+          console.log(`Marker ID ${m.id} added to layer ${layer} at [${m.lat}, ${m.lon}]`);
+        });
+      return marker;
+    }
+
+    // 레이어 데이터 표시
+    function displayLayerData(layer) {
+      layerGroups[layer].clearLayers();
+      const bounds = map.getBounds().pad(0.5);
+      const markers = allMarkers[layer].filter(m =>
+        m.lat >= bounds.getSouth() && m.lat <= bounds.getNorth() &&
+        m.lon >= bounds.getWest() && m.lon <= bounds.getEast()
+      );
+      markers.forEach(m => {
+        const marker = createMarker(m, layer);
+        if (marker) layerGroups[layer].addLayer(marker);
+      });
+      console.log(`Displayed ${markers.length} markers for layer ${layer}`);
+    }
+
+    // 모든 레이어 데이터 로드
+    async function loadAllData() {
+      try {
+        for (const layer of Object.keys(LAYER_COLORS)) {
+          const response = await fetch(`/hospital/data/${layer}`);
+          if (!response.ok) {
+            console.warn(`Failed to fetch data for layer ${layer}: ${response.status} ${response.statusText}`);
+            continue;
+          }
+          const data = await response.json();
+          allMarkers[layer] = data[`markers_${layer}`] || [];
+          console.log(`Loaded ${allMarkers[layer].length} markers for layer ${layer}`);
+        }
+        displayLayerData(document.getElementById('layerSelect').value);
+      } catch (error) {
+        console.error('データ読み込みエラー:', error);
+      }
+    }
+
+    // 병원 데이터 로드 함수
+    async function loadHospitalData() {
+      try {
+        const res = await fetch('/hospital/load-hospitals_jp', {
+          method: 'POST'
+        });
+        if (res.ok) {
+          const result = await res.json();
+          alert(`${result.message}`);
+          await loadAllData(); // 데이터 로드 후 모든 레이어 갱신
+        } else {
+          const error = await res.json();
+          alert(`読み込み失敗: ${error.detail || 'エラーが発生しました'}`);
+        }
+      } catch (err) {
+        alert("리퀘스트 중 에러가 발생했습니다");
+        console.error(err);
+      }
+    }
+
+    // WebSocket 설정
+    let ws = new WebSocket('ws://localhost:8000/hospital/ws');
+    ws.onopen = () => {
+      console.log('WebSocket 연결 성공');
+    };
+    ws.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.timestamp !== lastTimestamp) {
+          lastTimestamp = data.timestamp;
+          const layer = data.layer;
+          const action = data.action;
+          console.log(`WebSocket message received: layer=${layer}, action=${action}`);
+          // 특정 레이어 데이터만 갱신
+          const response = await fetch(`/hospital/data/${layer}`);
+          if (response.ok) {
+            const updatedData = await response.json();
+            allMarkers[layer] = updatedData[`markers_${layer}`] || [];
+            if (document.getElementById('layerSelect').value === String(layer)) {
+              displayLayerData(layer);
+            }
+            if (Number(layer) === 999 && action === 'add') {
+              triggerEmergencyAlert();
+              document.getElementById('layerSelect').value = '999';
+              displayLayerData(999);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('WebSocket 메시지 처리 에러:', error);
+      }
+    };
+    ws.onclose = () => {
+      console.log('WebSocket 연결 종료, 3초 후 재연결 시도');
+      setTimeout(() => {
+        ws = new WebSocket('ws://localhost:8000/hospital/ws');
+      }, 3000);
+    };
+    ws.onerror = (error) => {
+      console.error('WebSocket 에러:', error);
+    };
+
+    // 긴급 알림 함수
+    function triggerEmergencyAlert() {
+      const alertBox = document.getElementById('alert');
+      const sound = document.getElementById('alertSound');
+      const mapDiv = document.getElementById('map');
+      alertBox.style.display = 'block';
+      sound.play();
+      mapDiv.classList.add('flash-alert');
+      setTimeout(() => {
+        alertBox.style.display = 'none';
+        mapDiv.classList.remove('flash-alert');
+      }, 10000);
+    }
+
+    // 마커 확인
+    async function confirmMarker(id) {
+      try {
+        const res = await fetch(`/hospital/confirm-marker/${id}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          alert(`マーカー ID ${id} が確認され、削除されました。`);
+          allMarkers[999] = allMarkers[999].filter(m => m.id !== id);
+          displayLayerData(999);
+        } else {
+          const error = await res.json();
+          alert(`削除失敗: ${error.detail}`);
+        }
+      } catch (err) {
+        alert("리퀘스트 중 에러가 발생했습니다");
+        console.error(err);
+      }
+    }
+
+    // 페이지 로드 시 모든 데이터 로드
+    loadAllData();
+
+    // 레이어 선택 시 데이터 표시
+    document.getElementById('layerSelect').addEventListener('change', () => {
+      displayLayerData(document.getElementById('layerSelect').value);
+    });
+
+    // 지도 이동/줌 시 데이터 갱신
+    map.on('moveend zoomend', () => {
+      displayLayerData(document.getElementById('layerSelect').value);
+    });
+  </script>
+</body>
+</html>
