@@ -46,13 +46,6 @@
       <option value="3">レイヤー 3 (緑)</option>
       <option value="4">レイヤー 4 (オレンジ)</option>
       <option value="5">レイヤー 5 (紫)</option>
-      <option value="6">レイヤー 6 (茶)</option>
-      <option value="7">レイヤー 7 (ピンク)</option>
-      <option value="8">レイヤー 8 (灰色)</option>
-      <option value="9">レイヤー 9 (黒)</option>
-      <option value="10">レイヤー 10 (シアン)</option>
-      <option value="29">レイヤー 29 (黄色)</option>
-      <option value="31">レイヤー 31 (濃緑)</option>
       <option value="999">レイヤー 999 (赤 - 緊急)</option>
     </select>
   </div>
@@ -65,8 +58,6 @@
   <script>
     const LAYER_COLORS = {
       1: 'blue', 2: 'red', 3: 'green', 4: 'orange', 5: 'purple',
-      6: 'brown', 7: 'pink', 8: 'gray', 9: 'black', 10: 'cyan',
-      29: 'yellow', 31: 'darkgreen',
       999: 'red'
     };
     const MAP_CENTER = [35.6762, 139.6503];
@@ -110,7 +101,7 @@
         max_lon: bounds.getEast()
       });
       try {
-        const response = await fetch(`/data/${layer}?${params}`);
+        const response = await fetch(`/hospital/data/${layer}?${params}`);
         if (!response.ok) {
           console.warn(`Failed to fetch data for layer ${layer}: ${response.status} ${response.statusText}`);
           return;
@@ -164,7 +155,7 @@
     }
 
     // WebSocket 연결 설정
-    let ws = new WebSocket('ws://localhost:8000/ws');
+    let ws = new WebSocket('ws://localhost:8000/hospital/ws');
     ws.onopen = () => {
       console.log('WebSocket 연결 성공');
     };
@@ -190,7 +181,7 @@
     ws.onclose = () => {
       console.log('WebSocket 연결 종료, 3초 후 재연결 시도');
       setTimeout(() => {
-        ws = new WebSocket('ws://localhost:8000/ws');
+        ws = new WebSocket('ws://localhost:8000/hospital/ws');
       }, 3000);
     };
     ws.onerror = (error) => {
@@ -214,7 +205,7 @@
     // マーカー 확인
     async function confirmMarker(id) {
       try {
-        const res = await fetch(`/confirm-marker/${id}`, {
+        const res = await fetch(`/hospital/confirm-marker/${id}`, {
           method: 'DELETE'
         });
         if (res.ok) {
