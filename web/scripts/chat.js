@@ -3,9 +3,9 @@ document.addEventListener("DOMContentLoaded", () => {
   
 
   document.getElementById("hospital-btn").addEventListener("click", () => {
-    //window.location.href = "/hospital/user-map-new";
+    window.location.href = "/hospital/user-map-new";
     //console.log("hospital");
-    window.location.href = "/web/hospital.html";
+    //window.location.href = "/hospital/user-map-new";
   });
 
   navigator.geolocation.getCurrentPosition(

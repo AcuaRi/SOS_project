@@ -208,12 +208,13 @@
   </div>
 
   <script>
-    const from_email = sessionStorage.getItem('IdData');
+    const from_email = sessionStorage.getItem('IdData'); // 세션에 email 저장
     const emailInput = document.getElementById('emailInput');
     const searchBtn = document.getElementById('searchBtn');
-    const status = document.getElementById('status');
-    const requestsList = document.getElementById('requestsList');
-    console.log(from_email)
+    const status = document.getElementById('status'); // 보호자 추가 텍스트
+    const requestsList = document.getElementById('requestsList'); // 친구 추가 텍스트
+    //console.log(from_email)
+
     // 보호자 요청 보내기 (이메일로)
     searchBtn.addEventListener('click', async () => {
       const to_email = emailInput.value.trim();
@@ -264,34 +265,34 @@
         
         if (!res.ok) return;
         
-        const requests = await res.json();
-        console.log(requests)
+        const requests = await res.json(); //[{ id: , email: , friends1: , status: }]
+        //console.log(requests)
         
         if (requests.length === 0) {
           requestsList.innerHTML = '<div class="no-requests">받은 요청이 없습니다.</div>';
           return;
         }
-        console.log(requests)
+        //console.log(requests)
         for (const req of requests) {
-          const requestItem = document.createElement("div");
-          requestItem.className = "request-item";
-          console.log(1)
+          //const requestItem = document.createElement("div");
+          //requestItem.className = "request-item";
+          
           const emailDiv = document.createElement("div");
           emailDiv.className = "request-email";
           emailDiv.textContent = req.email;
-          console.log(2)
+
           const buttonsDiv = document.createElement("div");
           buttonsDiv.className = "request-buttons";
-          console.log(3)
+          
           const acceptBtn = document.createElement("button");
           acceptBtn.className = "accept-btn";
           acceptBtn.textContent = "수락";
-          //acceptBtn.onclick = () => respondRequest(req.from_user_id, true);
-          console.log(4)
+          acceptBtn.onclick = () => respondRequest(req.email, true);
+          
           const denyBtn = document.createElement("button");
           denyBtn.className = "deny-btn";
           denyBtn.textContent = "거절";
-          //denyBtn.onclick = () => respondRequest(req.from_user_id, false);
+          denyBtn.onclick = () => respondRequest(req.email, false);
           
           buttonsDiv.append(acceptBtn, denyBtn);
             
@@ -307,7 +308,7 @@
       } catch (err) {
         requestsList.innerHTML = '<div class="no-requests">요청 목록을 불러오는데 실패했습니다.</div>';
       }
-    }
+    } // 현재 여기까지 완료 with 조교님
     
     // 보호자 요청 수락/거절
     async function respondRequest(from_id, accept) {
@@ -320,7 +321,8 @@
           },
           body: JSON.stringify({ from_id, accept })
         });
-        
+        console.log(from_id , accept)
+
         const data = await res.json();
         
         if (accept && data.success) {
