@@ -37,7 +37,7 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
     
     # 로그인 성공 시, 여기에서 JWT 토큰 등을 생성하여 반환할 수 있습니다.
     # 지금은 간단히 성공 메시지를 반환합니다.
-    return RedirectResponse(url="http://35.78.251.74:8000/web/chat.html", status_code=status.HTTP_302_FOUND)
+    #return RedirectResponse(url="http://35.78.251.74:8000/web/chat.html", status_code=status.HTTP_302_FOUND)
 
 # 데이터베이스 테이블이 존재하지 않을 경우 생성 (개발 단계에서 유용)
 # 실제 운영 환경에서는 Alembic과 같은 마이그레이션 도구를 사용하는 것이 좋습니다.

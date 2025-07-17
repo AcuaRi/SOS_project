@@ -178,7 +178,8 @@
     }
 
     // WebSocket 설정
-    let ws = new WebSocket('ws://localhost:8013/hospital/ws');
+    //let ws = new WebSocket('ws://localhost:8000/hospital/ws');
+    let ws = new WebSocket(`ws://${location.host}/hospital/ws`);
     ws.onopen = () => {
       console.log('WebSocket 연결 성공');
     };
@@ -212,7 +213,8 @@
     ws.onclose = () => {
       console.log('WebSocket 연결 종료, 3초 후 재연결 시도');
       setTimeout(() => {
-        ws = new WebSocket('ws://localhost:8013/hospital/ws');
+        //ws = new WebSocket('ws://localhost:8000/hospital/ws');
+      	ws = new WebSocket(`ws://${location.host}/hospital/ws`);
       }, 3000);
     };
     ws.onerror = (error) => {

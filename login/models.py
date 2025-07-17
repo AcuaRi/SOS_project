@@ -16,3 +16,12 @@ class User(Base):
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"
+    
+class sos_friends(Base):
+    __tablename__="sos_friends"
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    email = Column(String(100), unique=True, nullable=False)
+    
+    def __repr__(self):
+        return f"<sos_friends(id={self.id}, email='{self.email}')>"

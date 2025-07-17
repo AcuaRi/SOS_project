@@ -1,4 +1,3 @@
-<!-- 救助要請ページ -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -26,69 +25,116 @@
       cursor: pointer;
       margin-bottom: 15px;
     }
+    
+    /* 알림창 스타일 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+    }
+    
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 400px;
+      text-align: center;
+      border-radius: 10px;
+    }
+    
+    .modal-buttons {
+      margin-top: 20px;
+    }
+    
+    .modal-btn {
+      padding: 10px 20px;
+      margin: 0 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    .btn-yes {
+      background-color: #4CAF50;
+      color: white;
+    }
+    
+    .btn-no {
+      background-color: #f44336;
+      color: white;
+    }
+    
+    .btn-yes:hover {
+      background-color: #45a049;
+    }
+    
+    .btn-no:hover {
+      background-color: #da190b;
+    }
   </style>
 </head>
 <body>
+  <!-- 위치 공유 확인 알림창 -->
+  <div id="locationModal" class="modal">
+    <div class="modal-content">
+      <h2>위치 공유 확인</h2>
+      <p>현재 위치를 공유하시겠습니까?</p>
+      <div class="modal-buttons">
+        <button id="yesBtn" class="modal-btn btn-yes">예</button>
+        <button id="noBtn" class="modal-btn btn-no">아니오</button>
+      </div>
+    </div>
+  </div>
+
   <h1>救助者の現在位置</h1>
-  <div id="status">位置共有状態: <span id="shareStatus">🟢 共有中</span></div>
+  <div id="status">位置共有状态: <span id="shareStatus">🟢 共有中</span></div>
   <button id="stopShareBtn">位置共有終了</button>
   <div id="map"></div>
 
 <script>
-  // 내 정보(JWT 토큰으로 user_id 얻기)
-  async function getMyInfo() {
-    const jwt = localStorage.getItem("jwt_token");
-    const res = await fetch("/me", {
-      headers: { "Authorization": "Bearer " + jwt }
-    });
-    if (!res.ok) {
-      alert("ログインが必要です。");
-      window.location.href = "/static/login.html";
-      return null;
-    }
-    return await res.json(); // {user_id, email}
-  }
+  const lat = 35.65525241124183;
+  const lng = 139.76066445459867;
+  console.log(lat, lng);
 
-  // 내 위치 정보 가져오기
-  async function getMyLocation(user_id) {
-    const res = await fetch(`/location/${user_id}`);
-    if (!res.ok) return null;
-    return await res.json(); // {lat, lng}
-  }
+  // 페이지 로드 시 알림창 표시
+  window.addEventListener('load', function() {
+    document.getElementById('locationModal').style.display = 'block';
+  });
 
-  // 지도에 내 위치 그리기
+  // "예" 버튼 클릭 시
+  document.getElementById('yesBtn').addEventListener('click', function() {
+    document.getElementById('locationModal').style.display = 'none';
+    drawMyMap(); // 지도 표시
+  });
+
+  // "아니오" 버튼 클릭 시
+  document.getElementById('noBtn').addEventListener('click', function() {
+    window.location.href = '/web/chat.html'; // chat.html로 이동
+  });
+
   async function drawMyMap() {
-    const user = await getMyInfo(); // 내 정보(user_id) 획득
-    if (!user) return;
-    const loc = await getMyLocation(user.user_id); // user_id로 위치 가져옴
-    if (!loc || !loc.lat || !loc.lng) {
-      alert("位置情報がありません。");
-      return;
-    }
-    // 지도 띄우기
-    const map = L.map('map').setView([loc.lat, loc.lng], 13); // 지도 초기화 (내 위치 중심)
+    const map = L.map('map').setView([lat, lng], 13); // 지도 초기화 (내 위치 중심)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); // 지도 배경
-    L.marker([loc.lat, loc.lng]).addTo(map).bindPopup("내 위치").openPopup(); // 내 위치 마커
+    L.marker([lat, lng]).addTo(map).bindPopup("내 위치").openPopup(); // 내 위치 마커
   }
 
-  drawMyMap(); // 페이지가 열리면 실행
-
-  document.getElementById('stopShareBtn').onclick = async function() {
-    if (!confirm("本当に位置情報の共有を停止しますか？")) return;
-    const jwt = localStorage.getItem("jwt_token");
-    const res = await fetch("/location", {
-      method: "DELETE",
-      headers: { "Authorization": "Bearer " + jwt }
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert("位置情報の共有が停止されました。");
-      // 필요 시 메인 화면 또는 버튼 페이지 등으로 이동
-      window.location.href = "/static/button.html";
-    } else {
-      alert("位置情報の削除に失敗しました: " + (data.msg || ""));
+  // 위치 공유 종료 버튼 기능
+  document.getElementById('stopShareBtn').addEventListener('click', function() {
+    if (confirm('위치 공유를 종료하시겠습니까?')) {
+      document.getElementById('shareStatus').textContent = '🔴 공유 중지';
+      window.location.href = '/web/chat.html';
+      // 여기에 위치 공유 종료 로직을 추가할 수 있습니다.
     }
-  };
+  });
+
 </script>
 
 </body>

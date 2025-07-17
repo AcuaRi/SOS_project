@@ -1,103 +1,350 @@
-<!-- 이메일로 보호자 추가 -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>보호자 추가</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #fff0d9;
+    }
+    
+    .container {
+      display: flex;
+      gap: 30px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .left-panel {
+      flex: 1;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      height: fit-content;
+    }
+    
+    .center-panel {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 80px;
+    }
+    
+    .add-guardian-form {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
+    }
+    
+    .add-guardian-form h2 {
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 24px;
+    }
+    
+    #emailInput {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+    }
+    
+    #emailInput:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    #searchBtn {
+      background-color: #4CAF50;
+      color: white;
+    }
+    
+    #searchBtn:hover {
+      background-color: #45a049;
+    }
+    
+    .home-btn {
+      background-color: #2196F3;
+      color: white;
+    }
+    
+    .home-btn:hover {
+      background-color: #1976D2;
+    }
+    
+    #status {
+      margin-top: 15px;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    
+    .requests-section h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 20px;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    
+    .request-item {
+      background: #f9f9f9;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border-left: 4px solid #4CAF50;
+    }
+    
+    .request-email {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    .request-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .accept-btn {
+      background-color: #4CAF50;
+      color: white;
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+    
+    .accept-btn:hover {
+      background-color: #45a049;
+    }
+    
+    .deny-btn {
+      background-color: #f44336;
+      color: white;
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+    
+    .deny-btn:hover {
+      background-color: #d32f2f;
+    }
+    
+    .no-requests {
+      color: #666;
+      font-style: italic;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+      
+      .center-panel {
+        padding-top: 20px;
+      }
+      
+      .add-guardian-form {
+        padding: 20px;
+      }
+      
+      .button-group {
+        flex-direction: column;
+      }
+    }
+  </style>
 </head>
-
 <body>
-  <h2>보호자 추가</h2>
-
-  <!-- 입력 폼 -->
-  <input id="emailInput" placeholder="이메일 입력" />
-  <button id="searchBtn">보호자 요청 보내기</button>
-  <button onclick="location.href='/static/button.html'"> 홈으로 </button>
-  <div id="status"></div>
-
-  <h2>친구 추가 요청</h2>
-  <ul id="requestsList"></ul>
+  <div class="container">
+    <!-- 왼쪽 패널: 친구 요청 목록 -->
+    <div class="left-panel">
+      <div class="requests-section">
+        <h2>친구 추가 요청</h2>
+        <div id="requestsList"></div>
+      </div>
+    </div>
+    
+    <!-- 중앙 패널: 보호자 추가 폼 -->
+    <div class="center-panel">
+      <div class="add-guardian-form">
+        <h2>보호자 추가</h2>
+        <input id="emailInput" placeholder="이메일 입력" />
+        <div class="button-group">
+          <button id="searchBtn">보호자 요청 보내기</button>
+          <button class="home-btn" onclick="location.href='/web/chat.html'">홈으로</button>
+        </div>
+        <div id="status"></div>
+      </div>
+    </div>
+  </div>
 
   <script>
+    const from_email = sessionStorage.getItem('IdData');
     const emailInput = document.getElementById('emailInput');
     const searchBtn = document.getElementById('searchBtn');
     const status = document.getElementById('status');
     const requestsList = document.getElementById('requestsList');
-    const jwt = localStorage.getItem("jwt_token");
-
+    console.log(from_email)
     // 보호자 요청 보내기 (이메일로)
     searchBtn.addEventListener('click', async () => {
-      const email = emailInput.value.trim();
-      if (!email) {
+      const to_email = emailInput.value.trim();
+      if (!to_email) {
         status.textContent = "이메일을 입력하세요.";
+        status.style.color = "#f44336";
         return;
       }
+      
       try {
-        const res = await fetch("/friend_request", {
+        const res = await fetch("/navigation/friend_request", {
           method: "POST",
           headers: {
-            "Authorization": "Bearer " + jwt,
+            //"Authorization": "Bearer " + jwt,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ from_email, to_email })
         });
         const data = await res.json();
+        
         if (data.success) {
-          status.textContent = `✅ ${email} 님에게 보호자 요청을 보냈습니다.`;
+          status.textContent = `✅ ${to_email} 님에게 보호자 요청을 보냈습니다.`;
+          status.style.color = "#4CAF50";
+          emailInput.value = '';
         } else {
           status.textContent = data.msg || "보호자 요청 실패";
+          status.style.color = "#f44336";
         }
       } catch (err) {
         status.textContent = "서버 오류: " + err.message;
+        status.style.color = "#f44336";
       }
     });
-
+    
     // 받은 보호자 요청 목록 불러오기
     async function loadRequests() {
       requestsList.innerHTML = '';
-      const res = await fetch("/friend_requests", {
-        headers: { "Authorization": "Bearer " + jwt }
-      });
-      if (!res.ok) return;
-      const requests = await res.json(); // [{id, email}]
-      for (const req of requests) {
-        const li = document.createElement("li");
-        li.textContent = req.email;
-        const acceptBtn = document.createElement("button");
-        acceptBtn.textContent = "수락";
-        acceptBtn.onclick = () => respondRequest(req.from_user_id, true);
-        const denyBtn = document.createElement("button");
-        denyBtn.textContent = "거절";
-        denyBtn.onclick = () => respondRequest(req.from_user_id, false);
-        li.appendChild(acceptBtn);
-        li.appendChild(denyBtn);
-        requestsList.appendChild(li);
+      
+      try {
+        const res = await fetch("/navigation/friend_requests", {
+          method: "POST",
+          headers: {
+            //"Authorization": "Bearer " + jwt,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({from_email})
+        });
+        
+        if (!res.ok) return;
+        
+        const requests = await res.json();
+        console.log(requests)
+        
+        if (requests.length === 0) {
+          requestsList.innerHTML = '<div class="no-requests">받은 요청이 없습니다.</div>';
+          return;
+        }
+        console.log(requests)
+        for (const req of requests) {
+          const requestItem = document.createElement("div");
+          requestItem.className = "request-item";
+          console.log(1)
+          const emailDiv = document.createElement("div");
+          emailDiv.className = "request-email";
+          emailDiv.textContent = req.email;
+          console.log(2)
+          const buttonsDiv = document.createElement("div");
+          buttonsDiv.className = "request-buttons";
+          console.log(3)
+          const acceptBtn = document.createElement("button");
+          acceptBtn.className = "accept-btn";
+          acceptBtn.textContent = "수락";
+          //acceptBtn.onclick = () => respondRequest(req.from_user_id, true);
+          console.log(4)
+          const denyBtn = document.createElement("button");
+          denyBtn.className = "deny-btn";
+          denyBtn.textContent = "거절";
+          //denyBtn.onclick = () => respondRequest(req.from_user_id, false);
+          
+          buttonsDiv.append(acceptBtn, denyBtn);
+            
+          requestsList.append(emailDiv, buttonsDiv);
+          //buttonsDiv.appendChild(acceptBtn);
+          //buttonsDiv.appendChild(denyBtn);
+          
+          //requestItem.appendChild(emailDiv);
+          //requestItem.appendChild(buttonsDiv);
+          
+         // requestsList.appendChild(requestItem);
+        }
+      } catch (err) {
+        requestsList.innerHTML = '<div class="no-requests">요청 목록을 불러오는데 실패했습니다.</div>';
       }
     }
-
+    
     // 보호자 요청 수락/거절
     async function respondRequest(from_id, accept) {
-      const res = await fetch("/friend_request/respond", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + jwt,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ from_id, accept })
-      });
+      try {
+        const res = await fetch("/navigation/friend_request/respond", {
+          method: "POST",
+          headers: {
+            //"Authorization": "Bearer " + jwt,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ from_id, accept })
+        });
+        
         const data = await res.json();
+        
         if (accept && data.success) {
-          alert("보호자 요청이 수락되었습니다.");  // 팝업 메시지
-          console.log("보호자 요청이 수락되었습니다."); // 콘솔 메시지
+          alert("보호자 요청이 수락되었습니다.");
+          console.log("보호자 요청이 수락되었습니다.");
         } else if (!accept && data.success) {
           alert("보호자 요청이 거절되었습니다.");
         } else {
           alert(data.msg || "처리 실패");
         }
-      loadRequests();
+        
+        loadRequests();
+      } catch (err) {
+        alert("서버 오류: " + err.message);
+      }
     }
-
+    
+    // Enter 키로 요청 보내기
+    emailInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        searchBtn.click();
+      }
+    });
+    
     window.onload = loadRequests;
   </script>
 </body>

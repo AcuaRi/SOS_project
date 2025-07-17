@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from login import schemas, crud, auth, models
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from decimal import Decimal
 from Yun.db import SessionLocal as get_db_session 
 from dotenv import load_dotenv
 import mysql.connector
@@ -24,73 +25,75 @@ ALGORITHM = "HS256"
 def get_db():
     return mysql.connector.connect(
         host="localhost",
-        user="sos_navi",
-        password="SosNavi123!",
-        database="sos_navigation"
+        user="sos_user",
+        password="SosPass123!",
+        database="sos"
     )
 
-def get_user_id_from_token(token: str):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload["user_id"]
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+# def get_user_id_from_token(token: str):
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         return payload["user_id"]
+#     except Exception:
+#         raise HTTPException(status_code=401, detail="Invalid token")
 
-def is_valid_email(email):
-    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-    return re.match(pattern, email) is not None
+# def is_valid_email(email):
+#     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+#     return re.match(pattern, email) is not None
 
 router = APIRouter(prefix="/navigation", tags=["navigation"])
 
 # =========== 회원가입 ===========
 
-@router.post("/auth/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
-def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_email(db, email=user.email)
-    if db_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    new_user = crud.create_user(db=db, user=user)
-    return new_user
+# @router.post("/auth/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
+# def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+#     db_user = crud.get_user_by_email(db, email=user.email)
+#     if db_user:
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+#     new_user = crud.create_user(db=db, user=user)
+#     return new_user
 
-# =========== 로그인 ==============
-@router.post("/auth/login")
-def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_email(db, email=user.email)
-    if not db_user or not auth.verify_password(user.password, db_user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
+# # =========== 로그인 ==============
+# @router.post("/auth/login")
+# def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
+#     db_user = crud.get_user_by_email(db, email=user.email)
+#     if not db_user or not auth.verify_password(user.password, db_user.hashed_password):
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
 
-    # JWT 발급
-    payload = {
-        "user_id": db_user.id,
-        "email": db_user.email
-    }
-    access_token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-    return {"access_token": access_token, "token_type": "bearer"}
+#     # JWT 발급
+#     payload = {
+#         "user_id": db_user.id,
+#         "email": db_user.email
+#     }
+#     access_token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+#     return {"access_token": access_token, "token_type": "bearer"}
 
-# =========== 내 정보 ==============
-@router.get("/me")
-async def get_my_info(request: Request):
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
-    token = auth.replace("Bearer ", "")
-    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    return {"user_id": payload["user_id"], "email": payload["email"]}
+# # =========== 내 정보 ==============
+# @router.get("/me")
+# async def get_my_info(request: Request):
+#     auth = request.headers.get("Authorization", "")
+#     if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
+#     token = auth.replace("Bearer ", "")
+#     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#     return {"user_id": payload["user_id"], "email": payload["email"]}
 
 # ========== 위치 저장/조회 ==========
 
 class LocationModel(BaseModel):
-    lat: float
-    lng: float
+    email: str
+    lat: Decimal
+    lng: Decimal
 
-@router.post("/location")
+    
+@router.post("/sos_location")
 async def save_location(location: LocationModel, request: Request):
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
-    token = auth.replace("Bearer ", "")
-    user_id = get_user_id_from_token(token)
+    # auth = request.headers.get("Authorization", "")
+    #if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
+    #token = auth.replace("Bearer ", "")
+    #user_id = get_user_id_from_token(token)
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("REPLACE INTO locations (user_id, lat, lng) VALUES (%s, %s, %s)", (user_id, location.lat, location.lng))
+    cursor.execute("INSERT INTO sos_location (email, lat, lng) VALUES (%s, %s, %s)", (location.email, location.lat, location.lng))
     conn.commit()
     cursor.close()
     conn.close()
@@ -126,41 +129,46 @@ async def delete_location(request: Request):
 
 # ========== 친구 요청(이메일 기반) =============
 class FriendRequestModel(BaseModel):
-    email: str
+    from_email: str
+    to_email: str
 
 @router.post("/friend_request")
 async def send_friend_request(data: FriendRequestModel, request: Request):
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
-    token = auth.replace("Bearer ", "")
-    from_user_id = get_user_id_from_token(token)
-    email = data.email.strip().lower()
+    #auth = request.headers.get("Authorization", "")
+    #if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
+    #token = auth.replace("Bearer ", "")
+    #from_user_id = get_user_id_from_token(token)
+    text = data.from_email.strip().lower()
+    from_email = text.replace('"', '').replace('\\', '')
+    print(from_email)
+    #from_email = data.from_email.strip().lower()
+    to_email = data.to_email.strip().lower()
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE email=%s", (email,))
+    cursor.execute("SELECT id FROM users WHERE email=%s", (to_email,))
     to_row = cursor.fetchone()
     if not to_row:
         cursor.close()
         conn.close()
         return {"success": False, "msg": "해당 이메일 사용자가 없습니다."}
     to_user_id = to_row[0]
-    if to_user_id == from_user_id:
+    if to_user_id == data.from_email:
         cursor.close()
         conn.close()
         return {"success": False, "msg": "자기 자신에게 친구 요청 불가"}
-    cursor.execute("SELECT * FROM friends WHERE user_id=%s AND friend_user_id=%s", (from_user_id, to_user_id))
+    cursor.execute("SELECT * FROM sos_friends WHERE email=%s AND friends1=%s", (from_email, to_email))
     if cursor.fetchone():
         cursor.close()
         conn.close()
         return {"success": False, "msg": "이미 친구입니다."}
-    cursor.execute("SELECT * FROM friend_requests WHERE from_user_id=%s AND to_user_id=%s AND status='pending'", (from_user_id, to_user_id))
+    cursor.execute("SELECT * FROM friends_requests WHERE email=%s AND friends1=%s AND status='0'", (from_email, to_email))
     if cursor.fetchone():
         cursor.close()
         conn.close()
         return {"success": False, "msg": "이미 요청을 보냈습니다."}
     cursor.execute(
-        "INSERT INTO friend_requests (from_user_id, to_user_id, status, created_at) VALUES (%s, %s, 'pending', %s)",
-        (from_user_id, to_user_id, datetime.now())
+        "INSERT INTO friends_requests (email, friends1, status) VALUES (%s, %s, '0')",
+        (from_email, to_email)
     )
     conn.commit()
     cursor.close()
@@ -168,26 +176,30 @@ async def send_friend_request(data: FriendRequestModel, request: Request):
     return {"success": True}
 
 # ========== 받은 친구 요청 목록 ===========
-@router.get("/friend_requests")
-async def get_friend_requests(request: Request):
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
-    token = auth.replace("Bearer ", "")
-    user_id = get_user_id_from_token(token)
+class FriendListModel(BaseModel):
+    from_email: str
+    
+@router.post("/friend_requests")
+async def get_friend_requests(data: FriendListModel, request: Request):
+    # auth = request.headers.get("Authorization", "")
+    # if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
+    # token = auth.replace("Bearer ", "")
+    # user_id = get_user_id_from_token(token)
+    text = data.from_email.strip().lower()
+    from_email = text.replace('"', '').replace('\\', '')
+    print(data.from_email)
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
         """
-        SELECT fr.id, fr.from_user_id, u.email
-        FROM friend_requests fr
-        JOIN users u ON fr.from_user_id = u.id
-        WHERE fr.to_user_id = %s AND fr.status = 'pending'
+        select * from sos.friends_requests where friends1 = %s
         """,
-        (user_id,)
+        [from_email]
     )
     result = cursor.fetchall()
     cursor.close()
     conn.close()
+    print(result)
     return result
 
 # ========== 친구 요청 수락/거절 ===========
@@ -197,16 +209,16 @@ class FriendRequestRespondModel(BaseModel):
 
 @router.post("/friend_request/respond")
 async def respond_friend_request(data: FriendRequestRespondModel, request: Request):
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
-    token = auth.replace("Bearer ", "")
-    user_id = get_user_id_from_token(token)
+    # auth = request.headers.get("Authorization", "")
+    # if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
+    # token = auth.replace("Bearer ", "")
+    # user_id = get_user_id_from_token(token)
     from_user_id = data.from_id
     accept = data.accept
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id FROM friend_requests WHERE from_user_id=%s AND to_user_id=%s AND status='pending'",
+        "SELECT email FROM friend_requests WHERE from_user_id=%s AND to_user_id=%s AND status='0'",
         (from_user_id, user_id)
     )
     req = cursor.fetchone()
@@ -234,10 +246,10 @@ async def respond_friend_request(data: FriendRequestRespondModel, request: Reque
 # ============ 친구 목록 =============
 @router.get("/friends")
 async def get_friends(request: Request):
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
-    token = auth.replace("Bearer ", "")
-    user_id = get_user_id_from_token(token)
+    # auth = request.headers.get("Authorization", "")
+    # if not auth.startswith("Bearer "): raise HTTPException(status_code=401, detail="인증 정보 없음")
+    # token = auth.replace("Bearer ", "")
+    # user_id = get_user_id_from_token(token)
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(

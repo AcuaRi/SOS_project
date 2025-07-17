@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = document.getElementById('password').value;
 
             try {
-                const response = await fetch('http://35.78.251.74:8000/auth/login', {
+                const response = await fetch('http://13.114.32.21:8000/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (response.ok) {
-                    window.location.href = 'http://35.78.251.74:8000/web/chat.html';
+                    const data = document.getElementById('email').value;
+                    sessionStorage.setItem('IdData', JSON.stringify(data));
+                    window.location.href = 'http://13.114.32.21:8000/web/chat.html';
                 } else {
                     const errorData = await response.json();
                     alert(`로그인 실패: ${errorData.detail || response.statusText}`);

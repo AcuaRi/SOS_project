@@ -260,6 +260,32 @@ button:focus {
   justify-content: center;
   margin-top: 4px;
 }
+ 
+.guardian-box {
+  position: fixed;
 
+  bottom: 10px;                
+  
+  left: calc(50% + 180px + 8px);
+
+  width: 60px;
+  background: #f1f1f1;
+  border-radius: 14px;
+  box-shadow: 0 0 4px rgba(0,0,0,.15);
+  padding: 6px 0;
+  text-align: center;
+  font-size: 11px;
+  color: #444;
+
+  transition: transform .1s ease, color .1s ease;
+}
+.guardian-box span { font-size: 18px; }
+.guardian-box:active { transform: scale(.95); }
+
+
+.guardian-box.selected {
+  color: #7e57c2;           
+  font-weight: bold;
+}
 
 

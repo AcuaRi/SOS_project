@@ -40,29 +40,31 @@
 
         <!-- 텍스트 입력 -->
         <span class="divider"></span> 
-        <input type="text" name="symptom" id="symptom-input" placeholder="증상을 입력해주세요">
+        <input type="text" name="symptom" id="symptom-input" placeholder="症状を入力してください">
 
-        <button type="submit">보내기</button>
+        <button type="submit">↑</button>
       </div>
     </form>
 
     <!-- 하단 메뉴 -->
     <div class="bottom-nav">
-      <div class="nav-item selected">
+      <div class="nav-item selected" id="sos-btn">
         <span>🚨</span><br>SOS
       </div>
-      <div class="nav-item">
-        <span>📍</span><br>보호자 찾기
+      <div class="nav-item" id="notification-btn">
+        <span>📍</span><br>患者探し
       </div>
-      <div class="nav-item">
-        <span>🏥</span><br>병원 찾기
-      </div>
-      <div class="nav-item">
-        <span>➕</span><br>친구추가하기
+      <div class="nav-item" id="hospital-btn">
+        <span>🏥</span><br>病院探し
       </div>
     </div>
   </div>
 
+  <div class="guardian-box" id="guardian-add-btn">
+    <span>➕</span><br>保護者追加
+  </div>
+
   <script src="/web/scripts/chat.js" defer></script>
+  <script src="/web/scripts/sos_location.js" defer></script>
 </body>
 </html>

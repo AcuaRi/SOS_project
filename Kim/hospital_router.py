@@ -138,6 +138,27 @@ async def serve_map():
 async def serve_user_map(request: Request):
     return templates.TemplateResponse("user_map.html", {"request": request})
 
+@router.get("/user-map-new", response_class=HTMLResponse)
+async def serve_user_map(request: Request):
+    return templates.TemplateResponse("user_map_new.html", {"request": request})
+    
+@router.get("/nearby")
+async def get_nearby_hospitals(
+    lat: float = Query(...),
+    lon: float = Query(...),
+    db: Session = Depends(get_db)
+):
+    if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+        raise HTTPException(status_code=400, detail="Invalid lat/lon values")
+    type_code = 1  # 기본 병원 타입 고정
+    hospitals = db.query(Marker).filter(Marker.layer == type_code).all()
+    hospitals_sorted = sorted(hospitals, key=lambda m: haversine(lat, lon, m.lat, m.lon))
+    nearest_hospitals = [
+        {"id": h.id, "lat": h.lat, "lon": h.lon, "name": h.name, "phone": h.phone}
+        for h in hospitals_sorted[:5]
+    ]
+    return {"nearest_hospitals": nearest_hospitals}
+
 @router.get("/reload.txt")
 async def get_reload():
     return FileResponse("Kim/static/reload.txt")

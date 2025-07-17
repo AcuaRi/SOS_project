@@ -1,5 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
   console.log("\ud83d\udce6 DOM \ub85c\ub4dc \uc644\ub8cc");
+  
+
+  document.getElementById("hospital-btn").addEventListener("click", () => {
+    //window.location.href = "/hospital/user-map-new";
+    //console.log("hospital");
+    window.location.href = "/web/hospital.html";
+  });
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
@@ -208,67 +215,69 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// sos ¹öÆ° ¿¬°á
-document.getElementById("sos-btn").addEventListener("click", async () => {
-  // À§Ä¡ ¹Ş¾Æ¿À±â
-  navigator.geolocation.getCurrentPosition(async (position) => {
-    const lat = position.coords.latitude;
-    const lng = position.coords.longitude;
-    const jwt = localStorage.getItem("jwt_token");  // ·Î±×ÀÎ ½Ã ÀúÀåµÈ ÅäÅ«
+// // sos ï¿½ï¿½Æ° ï¿½ï¿½ï¿½ï¿½
+// document.getElementById("sos-btn").addEventListener("click", async () => {
+//   // ï¿½ï¿½Ä¡ ï¿½Ş¾Æ¿ï¿½ï¿½ï¿½
+//   navigator.geolocation.getCurrentPosition(async (position) => {
+//     const lat = position.coords.latitude;
+//     const lng = position.coords.longitude;
+//     const stored = sessionStorage.getItem('IdData');
+//     //const jwt = localStorage.getItem("jwt_token");  // ï¿½Î±ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Å«
 
-    // ¼­¹ö¿¡ À§Ä¡ ÀúÀå
-    const res = await fetch("/navigation/location", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + jwt,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ lat, lng })
-    });
+//     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½
+//     console.log(JSON.stringify({stored, lat, lng }))
+//     const res = await fetch("/navition/location", {
+//       method: "POST",
+//       headers: {
+//        // "Authorization": "Bearer " + jwt,
+//         "Content-Type": "application/json"
+//       },
+//       body: JSON.stringify({stored, lat, lng })
 
-    const data = await res.json();
-    if (data.success) {
-      // ¼º°ø½Ã index1.htmlÀ¸·Î ÀÌµ¿
-      window.location.href = "/web/index1.html";
-    } else {
-      alert("À§Ä¡ ÀúÀå ½ÇÆĞ: " + (data.msg || ""));
-    }
-  }, (err) => {
-    alert("À§Ä¡ Á¤º¸¸¦ °¡Á®¿Ã ¼ö ¾ø½À´Ï´Ù: " + err.message);
-  });
-});
+//     });
 
-// º¸È£ÀÚ °Å¸® ¹öÆ° ¿¬°á
-document.getElementById("notification-btn").addEventListener("click", () => {
-  window.location.href = "/web/notification.html";
-});
+//     const data = await res.json();
+//     if (data.success) {
+//       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ index1.htmlï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½
+//       window.location.href = "/web/index1.html";
+//     } else {
+//       alert("ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½: " + (data.msg || ""));
+//     }
+//   }, (err) => {
+//     alert("ï¿½ï¿½Ä¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½: " + err.message);
+//   });
+// });
 
+// // ï¿½ï¿½È£ï¿½ï¿½ ï¿½Å¸ï¿½ ï¿½ï¿½Æ° ï¿½ï¿½ï¿½ï¿½
+// document.getElementById("notification-btn").addEventListener("click", () => {
+//   window.location.href = "/web/notification.html";
+// });
 
 // document.addEventListener("DOMContentLoaded", () => {
-//   console.log("?“¦ DOM ë¡œë”© ?„ë£Œ");
+//   console.log("?ï¿½ï¿½ DOM ë¡œë”© ?ï¿½ë£Œ");
 
 //   navigator.geolocation.getCurrentPosition(
 //     (position) => {
 //       const lat = position.coords.latitude;
 //       const lng = position.coords.longitude;
 
-//       console.log("?“ ?„ì¹˜ ?•ë³´:", lat, lng);
+//       console.log("?ï¿½ï¿½ ?ï¿½ì¹˜ ?ï¿½ë³´:", lat, lng);
 //       document.getElementById("latitude").value = lat;
 //       document.getElementById("longitude").value = lng;
 
-//       // ?´ë?ë¶??„ë§ˆ ì§„ì² ??ê¸°ëŠ¥?´ë‘ ?°ê²°?˜ëŠ” ë¶€ë¶„ì¸ê±°ê°™?€?°ë§??
+//       // ?ï¿½ï¿½?ï¿½??ï¿½ë§ˆ ì§„ì² ??ê¸°ëŠ¥?ï¿½ë‘ ?ï¿½ê²°?ï¿½ëŠ” ë¶€ë¶„ì¸ê±°ê°™?ï¿½?ï¿½ë§??
 //       fetch(`${window.location.origin}/analyze`, {
 //         method: "POST",
 //         headers: { "Content-Type": "application/json" },
 //         body: JSON.stringify({ latitude: lat, longitude: lng })
 //       });
 //     },
-//     (err) => console.error("???„ì¹˜ ì¶”ì  ?¤íŒ¨:", err)
+//     (err) => console.error("???ï¿½ì¹˜ ì¶”ì  ?ï¿½íŒ¨:", err)
 //   );
 
 //   document.getElementById("chat-form").addEventListener("submit", async (e) => {
 //     e.preventDefault();
-//     console.log("?“¤ ì±„íŒ… ???œì¶œ ê°ì?");
+//     console.log("?ï¿½ï¿½ ì±„íŒ… ???ï¿½ì¶œ ê°ï¿½?");
 
 //     const form = e.target;
 //     const chatLog = document.getElementById("chat-log");
@@ -280,12 +289,12 @@ document.getElementById("notification-btn").addEventListener("click", () => {
 //     const imageFile = imageInput && imageInput.files.length > 0 ? imageInput.files[0] : null;
 
 //     function appendUserBubble(message, imageFile = null) {
-//       console.log("?’¬ ?¬ìš©???…ë ¥:", message);
+//       console.log("?ï¿½ï¿½ ?ï¿½ìš©???ï¿½ë ¥:", message);
 //       let imageTag = "";
 //       if (imageFile) {
 //         const imageURL = URL.createObjectURL(imageFile);
-//         imageTag = `<img src="${imageURL}" class="uploaded-image" alt="?…ë¡œ???´ë?ì§€">`;
-//         console.log("?–¼ï¸??´ë?ì§€ ?…ë¡œ?œë¨:", imageFile.name);
+//         imageTag = `<img src="${imageURL}" class="uploaded-image" alt="?ï¿½ë¡œ???ï¿½ï¿½?ì§€">`;
+//         console.log("?ï¿½ï¿½ï¿½??ï¿½ï¿½?ì§€ ?ï¿½ë¡œ?ï¿½ë¨:", imageFile.name);
 //       }
 
 //       chatLog.insertAdjacentHTML("beforeend", `
@@ -300,24 +309,24 @@ document.getElementById("notification-btn").addEventListener("click", () => {
 //     }
 
 //     function showLoadingBubble() {
-//       console.log("??ë¶„ì„ ì¤?ë©”ì‹œì§€ ?œì‹œ");
+//       console.log("??ë¶„ì„ ï¿½?ë©”ì‹œì§€ ?ï¿½ì‹œ");
 //       const loadingMessage = document.createElement("div");
 //       loadingMessage.className = "chat-bubble bot";
 //       loadingMessage.id = "loading-bubble";
 //       loadingMessage.innerHTML = `
 //         <img src="/static/Chatbot_icon.png" class="icon" alt="Bot">
-//         <div class="message loading">ë¶„ì„ ì¤‘ì…?ˆë‹¤...</div>
+//         <div class="message loading">ë¶„ì„ ì¤‘ì…?ï¿½ë‹¤...</div>
 //       `;
 //       chatLog.appendChild(loadingMessage);
 //     }
 
 //     function removeLoadingBubble() {
-//       console.log("?§¹ ë¡œë”© ë©”ì‹œì§€ ?œê±°");
+//       console.log("?ï¿½ï¿½ ë¡œë”© ë©”ì‹œì§€ ?ï¿½ê±°");
 //       document.getElementById("loading-bubble")?.remove();
 //     }
 
 //     function showBotReply(replyText) {
-//       console.log("?¤– ?œë²„ ?‘ë‹µ ?œì‹œ:", replyText);
+//       console.log("?ï¿½ï¿½ ?ï¿½ë²„ ?ï¿½ë‹µ ?ï¿½ì‹œ:", replyText);
 //       chatLog.insertAdjacentHTML("beforeend", `
 //         <div class="chat-bubble bot">
 //           <img src="/static/Chatbot_icon.png" class="icon" alt="Bot">
@@ -327,7 +336,7 @@ document.getElementById("notification-btn").addEventListener("click", () => {
 //     }
 
 //     async function sendToAnalyze(finalSymptom, imageFile = null) {
-//       console.log("?“¨ ë¶„ì„ ?„ì†¡ ?œì‘:", finalSymptom);
+//       console.log("?ï¿½ï¿½ ë¶„ì„ ?ï¿½ì†¡ ?ï¿½ì‘:", finalSymptom);
 //       const analyzeForm = new FormData(form);
 //       analyzeForm.set("symptom", finalSymptom);
 
@@ -336,30 +345,30 @@ document.getElementById("notification-btn").addEventListener("click", () => {
 //       }
 
 //       try {
-//         // 1. ì¦ìƒ ë¶„ì„ ?”ì²­
+//         // 1. ì¦ìƒ ë¶„ì„ ?ï¿½ì²­
 //         const analyzeRes = await fetch("/analyze", {
 //           method: "POST",
 //           body: analyzeForm
 //         });
 //         const analyzeResult = await analyzeRes.json();
-//         console.log("?“¥ ë¶„ì„ ?‘ë‹µ ?˜ì‹ :", analyzeResult);
+//         console.log("?ï¿½ï¿½ ë¶„ì„ ?ï¿½ë‹µ ?ï¿½ì‹ :", analyzeResult);
 
 //         if (!analyzeResult.record_id) {
-//           throw new Error("record_idë¥?ë°›ì? ëª»í–ˆ?µë‹ˆ??");
+//           throw new Error("record_idï¿½?ë°›ï¿½? ëª»í–ˆ?ï¿½ë‹ˆ??");
 //         }
 
-//         // 2. ?ì„¸ ê°€?´ë“œ ?”ì²­
+//         // 2. ?ï¿½ì„¸ ê°€?ï¿½ë“œ ?ï¿½ì²­
 //         const guideRes = await fetch(`/guide/${analyzeResult.record_id}`);
 //         const guideResult = await guideRes.json();
-//         console.log("?“– ê°€?´ë“œ ?‘ë‹µ ?˜ì‹ :", guideResult);
+//         console.log("?ï¿½ï¿½ ê°€?ï¿½ë“œ ?ï¿½ë‹µ ?ï¿½ì‹ :", guideResult);
 
 //         removeLoadingBubble();
-//         showBotReply(guideResult.guide); // ?ì„¸ ê°€?´ë“œë¥??”ë©´???œì‹œ
+//         showBotReply(guideResult.guide); // ?ï¿½ì„¸ ê°€?ï¿½ë“œï¿½??ï¿½ë©´???ï¿½ì‹œ
 
 //       } catch (err) {
-//         console.error("??ë¶„ì„ ?ëŠ” ê°€?´ë“œ ?”ì²­ ?¤íŒ¨:", err);
+//         console.error("??ë¶„ì„ ?ï¿½ëŠ” ê°€?ï¿½ë“œ ?ï¿½ì²­ ?ï¿½íŒ¨:", err);
 //         removeLoadingBubble();
-//         showBotReply("?¤ë¥˜ê°€ ë°œìƒ?ˆìŠµ?ˆë‹¤. ? ì‹œ ???¤ì‹œ ?œë„?´ì£¼?¸ìš”.");
+//         showBotReply("?ï¿½ë¥˜ê°€ ë°œìƒ?ï¿½ìŠµ?ï¿½ë‹¤. ?ï¿½ì‹œ ???ï¿½ì‹œ ?ï¿½ë„?ï¿½ì£¼?ï¿½ìš”.");
 //       }
 //     }
 
@@ -369,7 +378,7 @@ document.getElementById("notification-btn").addEventListener("click", () => {
 //       await sendToAnalyze(symptomText, imageFile);
 //       symptomInput.value = "";
 //     } else if (audio && audio.size > 0) {
-//       console.log("?§ ?¤ë””???Œì¼ ì¡´ì¬, STT ?„ì†¡ ?œì‘");
+//       console.log("?ï¿½ï¿½ ?ï¿½ë””???ï¿½ì¼ ì¡´ì¬, STT ?ï¿½ì†¡ ?ï¿½ì‘");
 //       const sttForm = new FormData();
 //       sttForm.append("audio", audio);
 
@@ -380,11 +389,11 @@ document.getElementById("notification-btn").addEventListener("click", () => {
 //         });
 
 //         const sttResult = await sttRes.json();
-//         console.log("?“ STT ?‘ë‹µ:", sttResult);
+//         console.log("?ï¿½ï¿½ STT ?ï¿½ë‹µ:", sttResult);
 
 //         const sttText = sttResult.stt_text?.trim();
 //         if (!sttText) {
-//           console.warn("? ï¸ STT ê²°ê³¼ ?†ìŒ");
+//           console.warn("?ï¿½ï¸ STT ê²°ê³¼ ?ï¿½ìŒ");
 //           return;
 //         }
 
@@ -392,7 +401,7 @@ document.getElementById("notification-btn").addEventListener("click", () => {
 //         showLoadingBubble();
 //         await sendToAnalyze(sttText, imageFile);
 //       } catch (err) {
-//         console.error("??STT ?”ì²­ ?¤íŒ¨:", err);
+//         console.error("??STT ?ï¿½ì²­ ?ï¿½íŒ¨:", err);
 //       }
 //     }
 //   });
@@ -422,31 +431,31 @@ document.getElementById("notification-btn").addEventListener("click", () => {
 //   });
 
 
-//   // ?Œì„± ?¹ìŒ ì²˜ë¦¬
+//   // ?ï¿½ì„± ?ï¿½ìŒ ì²˜ë¦¬
 //   let mediaRecorder;
 //   let audioChunks = [];
 //   let isRecording = false;
 
 //   document.getElementById("record-toggle").addEventListener("click", async () => {
 //     const button = document.getElementById("record-toggle");
-//     console.log("?™ï¸??¹ìŒ ë²„íŠ¼ ?´ë¦­??);
+//     console.log("?ï¿½ï¿½ï¿½??ï¿½ìŒ ë²„íŠ¼ ?ï¿½ë¦­??);
 
 //     try {
 //       if (!isRecording) {
-//         console.log("?”„ ?¹ìŒ ?œì‘ ?œë„");
+//         console.log("?ï¿½ï¿½ ?ï¿½ìŒ ?ï¿½ì‘ ?ï¿½ë„");
 //         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-//         console.log("??ë§ˆì´???¤íŠ¸ë¦??‘ê·¼ ?±ê³µ");
+//         console.log("??ë§ˆì´???ï¿½íŠ¸ï¿½??ï¿½ê·¼ ?ï¿½ê³µ");
 
 //         mediaRecorder = new MediaRecorder(stream);
 //         audioChunks = [];
 
 //         mediaRecorder.ondataavailable = event => {
-//           console.log("?“¥ ?¤ë””??ì¡°ê° ?˜ì‹ ");
+//           console.log("?ï¿½ï¿½ ?ï¿½ë””??ì¡°ê° ?ï¿½ì‹ ");
 //           audioChunks.push(event.data);
 //         };
 
 //         mediaRecorder.onstop = () => {
-//           console.log("?›‘ ?¹ìŒ ì¢…ë£Œ, Blob ?ì„±");
+//           console.log("?ï¿½ï¿½ ?ï¿½ìŒ ì¢…ë£Œ, Blob ?ï¿½ì„±");
 //           const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
 //           const file = new File([audioBlob], "recorded_audio.webm", { type: "audio/webm" });
 
@@ -454,28 +463,28 @@ document.getElementById("notification-btn").addEventListener("click", () => {
 //           dataTransfer.items.add(file);
 
 //           document.getElementById("audio-upload").files = dataTransfer.files;
-//           console.log("?§ ?¹ìŒ???Œì¼ ?€???„ë£Œ:", file);
+//           console.log("?ï¿½ï¿½ ?ï¿½ìŒ???ï¿½ì¼ ?ï¿½???ï¿½ë£Œ:", file);
 
 //           document.getElementById("symptom-input").value = "";
 //           document.getElementById("chat-form").dispatchEvent(new Event("submit", { cancelable: true }));
 //         };
 
 //         mediaRecorder.onerror = e => {
-//           console.error("???¹ìŒ ì¤??¤ë¥˜ ë°œìƒ:", e);
+//           console.error("???ï¿½ìŒ ï¿½??ï¿½ë¥˜ ë°œìƒ:", e);
 //         };
 
 //         mediaRecorder.start();
 //         isRecording = true;
-//         button.textContent = "?”´";
-//         console.log("?¶ï¸ ?¹ìŒ ?œì‘??);
+//         button.textContent = "?ï¿½ï¿½";
+//         console.log("?ï¿½ï¸ ?ï¿½ìŒ ?ï¿½ì‘??);
 //       } else {
 //         mediaRecorder.stop();
 //         isRecording = false;
-//         button.textContent = "?Ÿ¥";
-//         console.log("?¹ï¸ ?¹ìŒ ?•ì???);
+//         button.textContent = "?ï¿½ï¿½";
+//         console.log("?ï¿½ï¸ ?ï¿½ìŒ ?ï¿½ï¿½???);
 //       }
 //     } catch (err) {
-//       console.error("??ë§ˆì´???‘ê·¼ ?¤íŒ¨:", err);
+//       console.error("??ë§ˆì´???ï¿½ê·¼ ?ï¿½íŒ¨:", err);
 //     }
 //   });
 // });

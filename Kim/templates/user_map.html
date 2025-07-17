@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>近隣病院マップ</title>
+  <title>瓦묌슔?낂솫?욁긿??/title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
     #map { height: 80vh; width: 100%; }
@@ -16,16 +16,16 @@
   </style>
 </head>
 <body>
-  <h3>🗺️ 近隣病院マップ</h3>
+  <h3>?뿺截?瓦묌슔?낂솫?욁긿??/h3>
   <div id="controls">
-    <input type="number" id="markerId" placeholder="마커 ID (예: 1)" required>
-    <button onclick="loadMarkerData()">마커 조회</button>
-    <div id="currentMarkerId">현재 마커 ID: 없음</div>
+    <input type="number" id="markerId" placeholder="留덉빱 ID (?? 1)" required>
+    <button onclick="loadMarkerData()">留덉빱 議고쉶</button>
+    <div id="currentMarkerId">?꾩옱 留덉빱 ID: ?놁쓬</div>
     <div class="info-field">Type Code: <span id="typeCodeDisplay">N/A</span></div>
-    <div class="info-field">위도: <span id="latDisplay">N/A</span></div>
-    <div class="info-field">경도: <span id="lonDisplay">N/A</span></div>
-    <div class="info-field">이름: <span id="nameDisplay">N/A</span></div>
-    <div class="info-field">전화번호: <span id="phoneDisplay">N/A</span></div>
+    <div class="info-field">?꾨룄: <span id="latDisplay">N/A</span></div>
+    <div class="info-field">寃쎈룄: <span id="lonDisplay">N/A</span></div>
+    <div class="info-field">?대쫫: <span id="nameDisplay">N/A</span></div>
+    <div class="info-field">?꾪솕踰덊샇: <span id="phoneDisplay">N/A</span></div>
   </div>
   <div id="error"></div>
   <div id="map"></div>
@@ -35,12 +35,12 @@
     const MAP_CENTER = [35.6762, 139.6503];
     const map = L.map('map').setView(MAP_CENTER, 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'Map data © OpenStreetMap contributors'
+      attribution: 'Map data 짤 OpenStreetMap contributors'
     }).addTo(map);
 
     let markersLayer = L.layerGroup().addTo(map);
 
-    // URL 파라미터 처리
+    // URL ?뚮씪誘명꽣 泥섎━
     window.onload = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const markerId = urlParams.get('id');
@@ -57,8 +57,8 @@
 
       if (!markerId) {
         errorDiv.style.display = 'block';
-        errorDiv.textContent = 'マーカーIDを入力してください。';
-        currentMarkerIdDiv.textContent = '현재 마커 ID: 없음';
+        errorDiv.textContent = '?욁꺖?ャ꺖ID?믣뀯?쎼걮?╉걦?졼걬?꾠?;
+        currentMarkerIdDiv.textContent = '?꾩옱 留덉빱 ID: ?놁쓬';
         return;
       }
 
@@ -69,36 +69,34 @@
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log('마커 데이터:', data); // 디버깅용 로그
+        console.log('留덉빱 ?곗씠??', data); // ?붾쾭源낆슜 濡쒓렇
 
-        // 현재 마커 ID 표시
-        currentMarkerIdDiv.textContent = `현재 마커 ID: ${markerId}`;
+        // ?꾩옱 留덉빱 ID ?쒖떆
+        currentMarkerIdDiv.textContent = `?꾩옱 留덉빱 ID: ${markerId}`;
 
-        // 입력 필드에 데이터 채우기
-        document.getElementById('typeCodeDisplay').textContent = data.type_code || 'N/A';
+        // ?낅젰 ?꾨뱶???곗씠??梨꾩슦湲?        document.getElementById('typeCodeDisplay').textContent = data.type_code || 'N/A';
         document.getElementById('latDisplay').textContent = data.lat != null ? data.lat.toFixed(6) : 'N/A';
         document.getElementById('lonDisplay').textContent = data.lon != null ? data.lon.toFixed(6) : 'N/A';
         document.getElementById('nameDisplay').textContent = data.name || 'N/A';
         document.getElementById('phoneDisplay').textContent = data.phone || 'N/A';
 
-        // 근처 병원 데이터 로드
+        // 洹쇱쿂 蹂묒썝 ?곗씠??濡쒕뱶
         await loadNearestHospitals(data);
       } catch (error) {
-        console.error('마커 데이터 로드 에러:', error);
+        console.error('留덉빱 ?곗씠??濡쒕뱶 ?먮윭:', error);
         errorDiv.style.display = 'block';
-        errorDiv.textContent = 'マーカー情報の読み込みに失敗しました。';
-        currentMarkerIdDiv.textContent = '현재 마커 ID: 없음';
+        errorDiv.textContent = '?욁꺖?ャ꺖?끻젿??き?욤씔?욍겓鸚길븮?쀣겲?쀣걼??;
+        currentMarkerIdDiv.textContent = '?꾩옱 留덉빱 ID: ?놁쓬';
       }
     }
 
     async function loadNearestHospitals(markerData) {
       const errorDiv = document.getElementById('error');
 
-      // 좌표 유효성 검사
-      if (markerData.lat == null || markerData.lon == null || isNaN(markerData.lat) || isNaN(markerData.lon)) {
+      // 醫뚰몴 ?좏슚??寃??      if (markerData.lat == null || markerData.lon == null || isNaN(markerData.lat) || isNaN(markerData.lon)) {
         errorDiv.style.display = 'block';
-        errorDiv.textContent = '유효하지 않은 좌표 데이터입니다.';
-        console.error('유효하지 않은 좌표:', markerData);
+        errorDiv.textContent = '?좏슚?섏? ?딆? 醫뚰몴 ?곗씠?곗엯?덈떎.';
+        console.error('?좏슚?섏? ?딆? 醫뚰몴:', markerData);
         return;
       }
 
@@ -118,19 +116,19 @@
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log('근처 병원 데이터:', data); // 디버깅용 로그
+        console.log('洹쇱쿂 蹂묒썝 ?곗씠??', data); // ?붾쾭源낆슜 濡쒓렇
         displayMarkers(data);
       } catch (error) {
-        console.error('근처 병원 데이터 로드 에러:', error);
+        console.error('洹쇱쿂 蹂묒썝 ?곗씠??濡쒕뱶 ?먮윭:', error);
         errorDiv.style.display = 'block';
-        errorDiv.textContent = '近隣病院データの読み込みに失敗しました。';
+        errorDiv.textContent = '瓦묌슔?낂솫?뉎꺖?욍겗沃?겳渦쇈겳?ュㅁ?쀣걮?얇걮?잆?;
       }
     }
 
     function displayMarkers(data) {
       markersLayer.clearLayers();
 
-      // 긴급 요청 마커 (빨간색)
+      // 湲닿툒 ?붿껌 留덉빱 (鍮④컙??
       if (data.input && data.input.lat != null && data.input.lon != null && !isNaN(data.input.lat) && !isNaN(data.input.lon)) {
         const emergencyMarker = L.marker([data.input.lat, data.input.lon], {
           icon: L.icon({
@@ -143,21 +141,21 @@
           })
         })
           .bindPopup(
-            `<b>📍 緊急要請位置</b><br/>
+            `<b>?뱧 渶딀θ쫨獄뗤퐤營?/b><br/>
              ID: ${data.marker_id || 'N/A'}<br/>
-             名前: ${data.input.name || 'N/A'}<br/>
-             電話: ${data.input.phone || 'N/A'}`
+             ?띶뎺: ${data.input.name || 'N/A'}<br/>
+             ?삭㈀: ${data.input.phone || 'N/A'}`
           )
           .addTo(markersLayer);
-        console.log(`긴급 요청 마커 추가: ID=${data.marker_id}, lat=${data.input.lat}, lon=${data.input.lon}`); // 디버깅용 로그
+        console.log(`湲닿툒 ?붿껌 留덉빱 異붽?: ID=${data.marker_id}, lat=${data.input.lat}, lon=${data.input.lon}`); // ?붾쾭源낆슜 濡쒓렇
 
-        // 지도 중심을 사용자 위치로 설정
+        // 吏??以묒떖???ъ슜???꾩튂濡??ㅼ젙
         map.setView([data.input.lat, data.input.lon], 14);
       } else {
-        console.warn('유효하지 않은 긴급 요청 좌표:', data.input);
+        console.warn('?좏슚?섏? ?딆? 湲닿툒 ?붿껌 醫뚰몴:', data.input);
       }
 
-      // 근처 병원 마커 (파란색)
+      // 洹쇱쿂 蹂묒썝 留덉빱 (?뚮???
       const validMarkers = [];
       if (data.nearest) {
         data.nearest.forEach(h => {
@@ -171,21 +169,21 @@
               })
             })
               .bindPopup(
-                `<b>🏥 病院</b><br/>
+                `<b>?룯 ?낂솫</b><br/>
                  ID: ${h.id}<br/>
-                 名前: ${h.name || 'N/A'}<br/>
-                 電話: ${h.phone || 'N/A'}`
+                 ?띶뎺: ${h.name || 'N/A'}<br/>
+                 ?삭㈀: ${h.phone || 'N/A'}`
               )
               .addTo(markersLayer);
             validMarkers.push(marker);
-            console.log(`병원 마커 추가: ID=${h.id}, lat=${h.lat}, lon=${h.lon}`); // 디버깅용 로그
+            console.log(`蹂묒썝 留덉빱 異붽?: ID=${h.id}, lat=${h.lat}, lon=${h.lon}`); // ?붾쾭源낆슜 濡쒓렇
           } else {
-            console.warn(`유효하지 않은 병원 좌표: ID=${h.id}, lat=${h.lat}, lon=${h.lon}`);
+            console.warn(`?좏슚?섏? ?딆? 蹂묒썝 醫뚰몴: ID=${h.id}, lat=${h.lat}, lon=${h.lon}`);
           }
         });
       }
 
-      // 지도 범위 조정 (긴급 요청 마커 포함)
+      // 吏??踰붿쐞 議곗젙 (湲닿툒 ?붿껌 留덉빱 ?ы븿)
       if (data.input && data.input.lat != null && data.input.lon != null && !isNaN(data.input.lat) && !isNaN(data.input.lon)) {
         const group = L.featureGroup([
           L.marker([data.input.lat, data.input.lon]),
