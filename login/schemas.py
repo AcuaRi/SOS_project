@@ -1,0 +1,18 @@
+from pydantic import BaseModel, EmailStr
+from datetime import datetime
+
+class UserBase(BaseModel):
+    email: EmailStr
+
+class UserCreate(UserBase):
+    password: str
+
+class UserLogin(UserBase):
+    password: str
+
+class UserResponse(UserBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True # Pydantic v2에서 orm_mode 대신 사용

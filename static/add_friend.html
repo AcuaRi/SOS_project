@@ -1,0 +1,104 @@
+<!-- 이메일로 보호자 추가 -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>保護者を追加</title>
+</head>
+
+<body>
+  <h2>保護者を追加</h2>
+
+  <!-- 입력 폼 -->
+  <input id="emailInput" placeholder="メールアドレスを入力" />
+  <button id="searchBtn">保護者リクエストを送信</button>
+  <button onclick="location.href='/static/button.html'"> 	ホームへ </button>
+  <div id="status"></div>
+
+  <h2>フレンド追加リクエスト</h2>
+  <ul id="requestsList"></ul>
+
+  <script>
+    const emailInput = document.getElementById('emailInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const status = document.getElementById('status');
+    const requestsList = document.getElementById('requestsList');
+    const jwt = localStorage.getItem("jwt_token");
+
+    // 보호자 요청 보내기 (이메일로)
+    searchBtn.addEventListener('click', async () => {
+      const email = emailInput.value.trim();
+      if (!email) {
+        status.textContent = "メールアドレスを入力してください。";
+        return;
+      }
+      try {
+        const res = await fetch("/navigation/friend_request", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + jwt,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (data.success) {
+          status.textContent = `✅ ${email} に保護者リクエストを送りました。`;
+        } else {
+          status.textContent = data.msg || "保護者リクエストの失敗";
+        }
+      } catch (err) {
+        status.textContent = "サーバーエラー：" + err.message;
+      }
+    });
+
+    // 받은 보호자 요청 목록 불러오기
+    async function loadRequests() {
+      requestsList.innerHTML = '';
+      const res = await fetch("/navigation/friend_requests", {
+        headers: { "Authorization": "Bearer " + jwt }
+      });
+      if (!res.ok) return;
+      const requests = await res.json(); // [{id, email}]
+      for (const req of requests) {
+        const li = document.createElement("li");
+        li.textContent = req.email;
+        const acceptBtn = document.createElement("button");
+        acceptBtn.textContent = "承認";
+        acceptBtn.onclick = () => respondRequest(req.from_user_id, true);
+        const denyBtn = document.createElement("button");
+        denyBtn.textContent = "拒否";
+        denyBtn.onclick = () => respondRequest(req.from_user_id, false);
+        li.appendChild(acceptBtn);
+        li.appendChild(denyBtn);
+        requestsList.appendChild(li);
+      }
+    }
+
+    // 보호자 요청 수락/거절
+    async function respondRequest(from_id, accept) {
+      const res = await fetch("/navigation/friend_request/respond", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + jwt,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ from_id, accept })
+      });
+        const data = await res.json();
+        if (accept && data.success) {
+          alert("保護者リクエストが承認されました。");  // 팝업 메시지
+          console.log("保護者リクエストが承認されました。"); // 콘솔 메시지
+        } else if (!accept && data.success) {
+          alert("	保護者リクエストが拒否されました。");
+        } else {
+          alert(data.msg || "処理に失敗しました");
+        }
+      loadRequests();
+    }
+
+    window.onload = loadRequests;
+  </script>
+</body>
+</html>

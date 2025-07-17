@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>位置経路を見る</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- 지도 라이브러리 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+
+  <style>
+    h1 { text-align: center; margin: 10px 0; }
+    #map { height: 80vh; width: 100%; }
+    #stopShareBtn {
+      padding: 10px 15px;
+      font-size: 16px;
+      background-color: #f44336;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>������ 救助者の位置を見る</h1>
+  <button id="stopShareBtn">	位置共有の停止</button>
+  <!-- 지도  -->
+  <div id="map"></div>
+
+  <!-- 지도 스크립트 -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+
+  <script>
+    const jwt = localStorage.getItem("jwt_token");
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromId = urlParams.get("from");
+    let myLatLng = null, fromLatLng = null;
+
+    const map = L.map("map").setView([37.5665, 126.9780], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    let myMarker, fromMarker, routingControl;
+
+    // 내 위치 갱신 & 서버에 저장
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      myLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      
+      // 내 위치 서버에 저장
+      await fetch("/navigation/location", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + jwt,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(myLatLng)
+      });
+      if (!myMarker) {
+        myMarker = L.marker([myLatLng.lat, myLatLng.lng]).addTo(map).bindPopup("自分の位置").openPopup();
+      } else {
+        myMarker.setLatLng([myLatLng.lat, myLatLng.lng]);
+      }
+      tryDrawRoute();
+    });
+
+    // 구조요청자(fromId)의 위치 불러오기
+    async function loadFromLocation() {
+      if (!fromId) return;
+      const res = await fetch(`/navigation/location/${fromId}`);
+      if (!res.ok) {
+        alert("相手の位置共有が終了しました。")
+        window.location.href = "/static/button.html";
+        return
+      }
+      fromLatLng = await res.json();
+      if (fromLatLng && fromLatLng.lat && fromLatLng.lng) {
+        if (!fromMarker) {
+          fromMarker = L.marker([fromLatLng.lat, fromLatLng.lng]).addTo(map).bindPopup("구조 요청자 위치");
+        } else {
+          fromMarker.setLatLng([fromLatLng.lat, fromLatLng.lng]);
+        }
+        tryDrawRoute();
+      }
+    }
+    loadFromLocation();
+
+    // 구조요청자와 내위치 경로 그리기
+    function tryDrawRoute() {
+      if (myLatLng && fromLatLng) {
+        if (routingControl) map.removeControl(routingControl);
+        routingControl = L.Routing.control({
+          waypoints: [
+            L.latLng(myLatLng.lat, myLatLng.lng),
+            L.latLng(fromLatLng.lat, fromLatLng.lng)
+          ]
+        }).addTo(map);
+      }
+    }
+    loadFromLocation();
+
+  document.getElementById('stopShareBtn').onclick = async function() {
+    if (!confirm("本当に位置共有を停止しますか？")) return;
+    const jwt = localStorage.getItem("jwt_token");
+    const res = await fetch("/navigation/location", {
+      method: "DELETE",
+      headers: { "Authorization": "Bearer " + jwt }
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("位置共有が停止されました。");
+      window.location.href = "/static/button.html";
+    } else {
+      alert("位置の削除に失敗しました： " + (data.msg || ""));
+    }
+  };
+  </script>
+</body>
+</html>

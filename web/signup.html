@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>회원가입</title>
+  <link rel="stylesheet" href="signup.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>회원가입</h1>
+    <form id="signup-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="Input" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Input" required>
+      </div>
+
+      <div class="button-group">
+        <button type="submit">가입 하기</button>
+        <button type="button" id="login-redirect-btn">로그인 하기</button>
+      </div>
+    </form>
+  </div>
+  <script src="./scripts/signup.js"></script>
+</body>
+</html>

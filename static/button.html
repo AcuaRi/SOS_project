@@ -1,0 +1,127 @@
+<!-- 기본 버튼 페이지 -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- flask -> filename, fastapi -> path -->
+  <link rel="stylesheet" href="/static/buttons.css">
+  <link rel="stylesheet" href="/static/browserStyle.css">
+  <title>	緊急救助要請</title>
+</head>
+
+<body>
+  <header>
+    <h1>������	緊急救助要請������</h1>
+    <button type="button" id="logoutBtn">	ログアウト</button>
+    <p>下のボタンを押すと救助要請が送信されます。</p>
+    <div id="sub-buttons">
+      <button onclick="location.href='/static/add_friend.html'">������ 	保護者管理</button>
+      <button onclick="location.href='/static/notifications.html'">������ 通知確認</button>
+    </div>
+  </header>
+  
+  <button id="mainButton" class="ready">
+    <div class="message submitMessage">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13 12.2">
+        <polyline stroke="currentColor" points="2,7.1 6.5,11.1 11,7.1 "/>
+        <line stroke="currentColor" x1="6.5" y1="1.2" x2="6.5" y2="10.3"/>
+      </svg> <span class="button-text">������ 緊急要請</span>
+    </div>
+
+    <div class="message loadingMessage">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19 17">
+        <circle class="loadingCircle" cx="2.2" cy="10" r="1.6"/>
+        <circle class="loadingCircle" cx="9.5" cy="10" r="1.6"/>
+        <circle class="loadingCircle" cx="16.8" cy="10" r="1.6"/>
+      </svg>
+    </div>
+    
+    <div class="message successMessage">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13 11">
+        <polyline stroke="currentColor" points="1.4,5.8 5.1,9.5 11.6,2.1 "/>
+      </svg> <span class="button-text">Success</span>
+    </div>
+  </button>
+
+  <canvas id="canvas"></canvas>
+
+  <!-- 버튼 클릭 시 위치를 서버에 저장 -->
+  <script>
+  document.getElementById('mainButton').addEventListener('click', () => {
+    // 브라우저에서 GPS 위치 요청
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (position) => {
+
+        // 위치 획득 성공시 실행
+        const lat = position.coords.latitude; // 위도
+        const lng = position.coords.longitude; // 경도
+
+        // JWT 토큰 가져오기 (localStorage에 저장)
+        const jwt = localStorage.getItem("jwt_token");
+
+        // 서버에 위치 저장
+        const res = await fetch("/navigation/location", {
+          method: "post",
+          headers: {
+            "Authorization": "Bearer " + jwt, // 인증 토큰 헤더
+            "content-Type": "application/json" // JSON 타입 명시
+          },
+          body: JSON.stringify({ lat , lng }) // 위도, 경도 정보 전송
+        });
+        const data = await res.json();
+
+        // 위치 저장 성공 여부 체크
+        if (data.success) {
+          // 내 정보 가져오기
+          const myInfo = await fetch ("/navigation/me", {
+            headers: { "Authorization": "Bearer " + jwt}}).then(r => r.json());
+          // 친구 목록 불러오기
+          const friendsRes = await fetch("/navigation/friends", {
+            headers: { "Authorization": "Bearer " + jwt }
+          });
+          if (friendsRes.ok) {
+            const friends = await friendsRes.json(); // [{id, email}]
+            for (const friend of friends) {
+              // 각 친구에게 알림 보내기
+              await fetch("/navigation/notify", {
+                method: "POST",
+                headers: {
+                  "Authorization": "Bearer " + jwt,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  to_user_id: friend.id, // 친구 user_id
+                  from_user_id: myInfo.user_id, // 내 user_id 
+                  email: myInfo.email, 
+                  type: "rescue"
+                })
+              });
+            }
+          }
+           window.location.href = "/static/index1.html";
+         } else {
+           alert("位置の保存に失敗しました:" + (data.msg || ""));
+        }
+      }, (err) => {
+         alert("位置情報を取得できません:" + err.message);
+      });
+    } else {
+      alert("このブラウザは位置情報に対応していません。");
+    }
+  });
+  </script>
+
+  <script>
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+
+      // JWT 토큰 제거
+      localStorage.removeItem('jwt_token');
+      alert("ログアウトされました。");
+      window.location.href = "/static/login.html";
+    });
+  </script>
+  <script src="/static/mainButton.js"></script>
+</body>
+</html>

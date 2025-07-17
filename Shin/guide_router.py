@@ -11,7 +11,7 @@ load_dotenv("/home/SoS/SOS_project/.env")        # GOOGLE_API_KEY 로드
 import os, json, google.generativeai as genai
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-MODEL = genai.GenerativeModel("gemini-1.5 flash")      
+MODEL = genai.GenerativeModel("gemini-1.5-flash")      
 
 router = APIRouter(prefix="/guide", tags=["Guide"])
 
@@ -57,9 +57,12 @@ def get_guide(rec_id: int):
         row.raw["가이드"] = guide
         db.add(row); db.commit()
 
+    risk_value = row.risk.value
+    dis_value = row.dis
+
     db.close()
     return {
-        "risk":  row.risk.value,   # Enum → “낮음·중간·높음·심각”
-        "dis":   row.dis,
+        "risk":  risk_value,   # Enum → “낮음·중간·높음·심각”
+        "dis":   dis_value,
         "guide": guide
     }

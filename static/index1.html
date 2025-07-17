@@ -1,0 +1,95 @@
+<!-- 救助要請ページ -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>救助者の位置</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+  <style>
+    #map { height: 80vh; }
+    #status { margin: 10px 0; font-weight: bold; font-size: 18px; }
+    #stopShareBtn {
+      padding: 10px 15px;
+      font-size: 16px;
+      background-color: #f44336;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <h1>救助者の現在位置</h1>
+  <div id="status">位置共有状態: <span id="shareStatus">������ 共有中</span></div>
+  <button id="stopShareBtn">位置共有終了</button>
+  <div id="map"></div>
+
+<script>
+  // 내 정보(JWT 토큰으로 user_id 얻기)
+  async function getMyInfo() {
+    const jwt = localStorage.getItem("jwt_token");
+    const res = await fetch("/navigation/me", {
+      headers: { "Authorization": "Bearer " + jwt }
+    });
+    if (!res.ok) {
+      alert("ログインが必要です。");
+      window.location.href = "/static/login.html";
+      return null;
+    }
+    return await res.json(); // {user_id, email}
+  }
+
+  // 내 위치 정보 가져오기
+  async function getMyLocation(user_id) {
+    const res = await fetch(`/navigation/location/${user_id}`);
+    if (!res.ok) return null;
+    return await res.json(); // {lat, lng}
+  }
+
+  // 지도에 내 위치 그리기
+  async function drawMyMap() {
+    const user = await getMyInfo(); // 내 정보(user_id) 획득
+    if (!user) return;
+    const loc = await getMyLocation(user.user_id); // user_id로 위치 가져옴
+    if (!loc || !loc.lat || !loc.lng) {
+      alert("位置情報がありません。");
+      return;
+    }
+    // 지도 띄우기
+    const map = L.map('map').setView([loc.lat, loc.lng], 13); // 지도 초기화 (내 위치 중심)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map); // 지도 배경
+    L.marker([loc.lat, loc.lng]).addTo(map).bindPopup("自分の位置").openPopup(); // 내 위치 마커
+  }
+
+  drawMyMap(); // 페이지가 열리면 실행
+
+  document.getElementById('stopShareBtn').onclick = async function() {
+    if (!confirm("本当に位置情報の共有を停止しますか？")) return;
+    const jwt = localStorage.getItem("jwt_token");
+    const res = await fetch("/navigation/location", {
+      method: "DELETE",
+      headers: { "Authorization": "Bearer " + jwt }
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("位置情報の共有が停止されました。");
+      // 필요 시 메인 화면 또는 버튼 페이지 등으로 이동
+      window.location.href = "/static/button.html";
+    } else {
+      alert("位置情報の削除に失敗しました: " + (data.msg || ""));
+    }
+  };
+</script>
+
+</body>
+</html>

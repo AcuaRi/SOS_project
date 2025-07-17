@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>회원가입</title>
+  <style>
+    #msg {
+      margin-top: 10px;
+      min-height: 20px;
+      font-weight: bold;
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <!-- 회원가입 폼 -->
+  <form id="signUpForm">
+    <h1>회원가입</h1>
+    <div>
+      <!-- 이메일 입력란 -->
+      이메일: <input type="email" id="signUpEmail" name="email" required />
+    </div>
+    <div>
+      <!-- 비밀번호 입력란 -->
+      비밀번호: <input type="password" id="signUpPassword" name="password" required />
+    </div>
+    <!-- 회원가입 버튼 -->
+    <button type="submit" id="signUpButton">회원가입</button>
+    <!-- 로그인 페이지 이동 버튼 -->
+    <button type="button" onclick="location.href='/static/login.html'">로그인 하러 가기</button>
+  </form>
+  <!-- 메시지 출력 영역 -->
+  <div id="msg"></div>
+
+  <script>
+    // 폼 제출 이벤트 리스너 등록
+    document.getElementById('signUpForm').addEventListener('submit', async function (e) {
+      e.preventDefault(); // 페이지 새로고침 방지
+
+      // 입력값 가져오기
+      const email = document.getElementById('signUpEmail').value.trim();
+      const password = document.getElementById('signUpPassword').value.trim();
+      const msgDiv = document.getElementById('msg'); // 메시지 출력 div
+
+      // 스타일 초기화
+      msgDiv.classList.remove("success");
+      msgDiv.style.color = "red";
+
+      // 빈 값 체크
+      if (!email || !password) {
+        msgDiv.textContent = "이메일과 비밀번호를 모두 입력하세요.";
+        return;
+      }
+
+      // 이메일 형식 검사 (간단한 정규식 사용)
+      const emailPattern = /^[\w\.-]+@[\w\.-]+\.\w+$/;
+      if (!emailPattern.test(email)) {
+        msgDiv.textContent = "올바른 이메일 형식이 아닙니다.";
+        return;
+      }
+
+      // 서버로 전송할 formData 객체 생성
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
+
+      try {
+        // 서버에 회원가입 요청
+        const res = await fetch("/navigation/signUp", {
+          method: "POST",
+          body: formData
+        });
+        // 서버에서 받은 응답 처리 (JSON 형태로 받음)
+        const data = await res.json();
+        msgDiv.textContent = data.msg; // 서버 메시지 표시
+
+        if (data.success) {
+          // 회원가입 성공 시
+          msgDiv.textContent = "회원가입 성공! 로그인 페이지로 이동합니다.";
+          msgDiv.style.color = "green";
+          msgDiv.classList.add("success");
+          // 1초 후 로그인 페이지로 이동
+          setTimeout(() => {
+            window.location.href = "/static/login.html";
+          }, 1000);
+        } else {
+          // 회원가입 실패 시 (예: 이메일 중복 등)
+          msgDiv.style.color = "red";
+          document.getElementById('signUpPassword').value = ""; // 비밀번호 입력란 초기화
+        }
+      } catch (err) {
+        // 네트워크 오류 등 서버 연결 안될 때
+        msgDiv.textContent = "서버 연결 오류!";
+        msgDiv.style.color = "red";
+      }
+    });
+  </script>
+</body>
+</html>

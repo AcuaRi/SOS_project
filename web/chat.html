@@ -16,10 +16,13 @@
     <!-- 채팅 메시지 표시 영역 -->
     <div id="chat-log">
       <div class="chat-bubble bot">
-        <img src="https://via.placeholder.com/40" class="icon" alt="Bot">
+        <img src="/static/Chatbot_icon.png" class="icon" alt="Bot">
         <div class="message">こんにちは、OOさん。症状を教えていただければ、解決策をお探しします！</div>
       </div>
     </div>
+    
+    <!-- 미리보기 영역 -->
+    <div id="preview-container" class="image-preview-box" style="display: none;"></div> 
 
     <!-- 입력 영역 -->
     <form id="chat-form" enctype="multipart/form-data">
@@ -46,218 +49,20 @@
     <!-- 하단 메뉴 -->
     <div class="bottom-nav">
       <div class="nav-item selected">
-        <span>☰</span><br>guide
+        <span>🚨</span><br>SOS
       </div>
       <div class="nav-item">
-        <span>🔖</span><br>정보 저장
+        <span>📍</span><br>보호자 찾기
       </div>
       <div class="nav-item">
-        <span>👤</span><br>계정
+        <span>🏥</span><br>병원 찾기
+      </div>
+      <div class="nav-item">
+        <span>➕</span><br>친구추가하기
       </div>
     </div>
   </div>
 
-  <!-- 위치 정보 설정 -->
-  <script>
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-
-        document.getElementById("latitude").value = lat;
-        document.getElementById("longitude").value = lng;
-        // 서버로 위치 전송
-        fetch("http://localhost:8000/location", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            latitude: lat,
-            longitude: lng
-          })
-        })
-        .then(res => res.json())
-        .then(data => console.log("서버 응답:", data))
-        .catch(err => console.error("전송 오류:", err));
-      },
-      (err) => {
-        console.error("위치 추적 실패:", err);
-      }
-    );
-  </script>
-
-<script>
-  let currentLatitude = null;
-  let currentLongitude = null;
-
-  // 위치 정보 가져오기 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-
-        document.getElementById("latitude").value = lat;
-        document.getElementById("longitude").value = lng;
-        // 서버로 위치 전송
-        fetch("http://localhost:8000/location", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            latitude: lat,
-            longitude: lng
-          })
-        })
-        .then(res => res.json())
-        .then(data => console.log("서버 응답:", data))
-        .catch(err => console.error("전송 오류:", err));
-      },
-      (err) => {
-        console.error("위치 추적 실패:", err);
-      }
-    );
-
-  document.getElementById("chat-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const form = e.target;
-    const formData = new FormData(form);
-    const chatLog = document.getElementById("chat-log");
-
-    const symptomInput = document.getElementById("symptom-input");
-    const symptomText = symptomInput.value.trim();
-    const audio = formData.get("audio");
-
-    // 사용자 말풍선 출력 함수
-    function appendUserBubble(message) {
-      chatLog.insertAdjacentHTML("beforeend", `
-        <div class="chat-bubble user">
-          <div class="message">${message}</div>
-          <img src="https://via.placeholder.com/40" class="icon" alt="User">
-        </div>
-      `);
-    }
-
-    // 분석 중 표시
-    function showLoadingBubble() {
-      const loadingMessage = document.createElement("div");
-      loadingMessage.className = "chat-bubble bot";
-      loadingMessage.id = "loading-bubble";
-      loadingMessage.innerHTML = `
-        <img src="https://via.placeholder.com/40" class="icon" alt="Bot">
-        <div class="message loading">분석 중입니다</div>
-      `;
-      chatLog.appendChild(loadingMessage);
-    }
-
-    // 분석 중 제거
-    function removeLoadingBubble() {
-      document.getElementById("loading-bubble")?.remove();
-    }
-
-    // 봇 응답 출력
-    function showBotReply(replyText) {
-      chatLog.insertAdjacentHTML("beforeend", `
-        <div class="chat-bubble bot">
-          <img src="https://via.placeholder.com/40" class="icon" alt="Bot">
-          <div class="message">${replyText.replace(/\n/g, "<br>")}</div>
-        </div>
-      `);
-    }
-
-    //  분석 요청 함수
-    async function sendToAnalyze(finalSymptom) {
-      const analyzeForm = new FormData(form);  // 모든 input 포함
-      analyzeForm.set("symptom", finalSymptom); // symptom만 덮어쓰기
-
-      // 디버깅용 출력
-      // for (const [key, value] of analyzeForm.entries()) console.log(key, value);
-
-      const res = await fetch("/analyze", {
-        method: "POST",
-        body: analyzeForm
-      });
-
-      const result = await res.json();
-      removeLoadingBubble();
-      showBotReply(result.reply);
-    }
-
-    // 텍스트 입력 처리
-    if (symptomText.length > 0) {
-      appendUserBubble(symptomText);
-      showLoadingBubble();
-      await sendToAnalyze(symptomText);
-      symptomInput.value = "";
-    }
-
-    // 음성 입력 처리
-    else if (audio && audio.size > 0) {
-      const sttForm = new FormData();
-      sttForm.append("audio", audio);
-
-      const sttRes = await fetch("/stt", {
-        method: "POST",
-        body: sttForm
-      });
-
-      const sttResult = await sttRes.json();
-      const sttText = sttResult.stt_text?.trim();
-
-      if (!sttText) return;
-
-      appendUserBubble(sttText);
-      showLoadingBubble();
-      await sendToAnalyze(sttText);
-    }
-  });
-</script>
-
-<!-- 음성 녹음 처리 -->
-<script>
-  let mediaRecorder;
-  let audioChunks = [];
-  let isRecording = false;
-
-  document.getElementById("record-toggle").addEventListener("click", async () => {
-    const button = document.getElementById("record-toggle");
-
-    if (!isRecording) {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
-
-      mediaRecorder.ondataavailable = event => {
-        audioChunks.push(event.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-        const file = new File([audioBlob], "recorded_audio.webm", { type: "audio/webm" });
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-
-        document.getElementById("audio-upload").files = dataTransfer.files;
-
-        // 텍스트 입력 초기화 후 자동 제출
-        document.getElementById("symptom-input").value = "";
-        document.getElementById("chat-form").dispatchEvent(new Event("submit", { cancelable: true }));
-      };
-
-      mediaRecorder.start();
-      isRecording = true;
-      button.textContent = "🔴";
-    } else {
-      mediaRecorder.stop();
-      isRecording = false;
-      button.textContent = "🟥";
-    }
-  });
-</script>
-
-
-  
+  <script src="/web/scripts/chat.js" defer></script>
 </body>
 </html>

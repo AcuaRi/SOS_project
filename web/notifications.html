@@ -1,0 +1,40 @@
+<!-- 알림 확인 페이지 -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>알림 확인</title>
+
+</head>
+
+<body>
+    <h2>받은 위치 공유 요청</h2>
+    <button onclick="location.href='/static/button.html'"> 홈으로 </button>
+    <br>
+    <ul id="notificationList"></ul>
+
+    <script>
+        const jwt = localStorage.getItem("jwt_token");
+        const list = document.getElementById("notificationList");
+
+        // 알림 목록 불러오기
+        async function loadNotifications() {
+        list.innerHTML = '';
+        const res = await fetch("/notifications", {
+            headers: { "Authorization": "Bearer " + jwt }
+        });
+        if (!res.ok) return;
+        const notifications = await res.json(); // [{id, from_id, email, timestamp}]
+        for (const n of notifications) {
+            const li = document.createElement("li");
+            const time = new Date(n.timestamp).toLocaleString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+            li.innerHTML = `[🕰️: ${time}] <a href="/static/index2.html?from=${n.from_id}">${n.email} 님의 위치 보기</a>`;
+            list.appendChild(li);
+        }
+        }
+        window.onload = loadNotifications;
+    </script>
+</body>
+</html>

@@ -23,7 +23,7 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 # Database 설정
-DATABASE_URL = "sqlite:///hospital.db"
+DATABASE_URL = "sqlite:///./Kim/hospital.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -37,9 +37,9 @@ class Marker(Base):
     name = Column(String, nullable=True)
     phone = Column(String, nullable=True)
 
-if os.path.exists('hospital.db'):
+if os.path.exists('Kim/hospital.db'):
     print("Removing existing hospital.db to create fresh schema")
-    os.remove('hospital.db')
+    os.remove('Kim/hospital.db')
 
 Base.metadata.create_all(bind=engine)
 

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 응급 대응 도우미</title>
+  <link rel="stylesheet" href="sos-login.css">
+</head>
+<body>
+  <div class="login-container">
+    <img src="/static/logo_without_background.png" alt="Logo" class="logo">
+    <h2>AI 응급 대응 도우미</h2>
+
+    <form id="login-form">
+      <input type="email" id="email" placeholder="Email" class="input-field" required>
+      <input type="password" id="password" placeholder="Password" class="input-field" required>
+
+      <div class="button-row">
+        <button class="login-btn" type="submit" id="login-btn">로그인</button>
+        <button class="signup-btn" type="button" id="signup-redirect-btn">계정 만들기</button>
+      </div>
+    </form>
+  </div>
+  <script src="./scripts/sos-login.js"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ログイン</title>
+  <style>
+    #msg {
+      margin-top: 10px;
+      min-height: 20px;
+      font-weight: bold;
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <!-- 로그인 폼 -->
+  <form id="loginForm">
+    <h1>ログイン</h1>
+    <div>
+      <!-- 이메일 입력란 -->
+      	メールアドレス： <input type="email" id="signInEmail" name="email" required />
+    </div>
+    <div>
+      <!-- 비밀번호 입력란 -->
+      パスワード： <input type="password" id="signInPassword" name="password" required />
+    </div>
+    <!-- 로그인 버튼 -->
+    <button type="submit" id="signInButton">ログイン</button>
+    <!-- 회원가입 페이지 이동 버튼 -->
+    <button type="button" onclick="location.href='/static/signUp.html'">会員登録ページへ</button>
+  </form>
+  <!-- 메시지 출력 영역 -->
+  <div id="msg"></div>
+
+  <script>
+    // 로그인 폼 제출 이벤트 리스너 등록
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+      e.preventDefault(); // 페이지 새로고침 방지
+
+      // 입력값 가져오기
+      const email = document.getElementById('signInEmail').value.trim();
+      const password = document.getElementById('signInPassword').value.trim();
+      const msgDiv = document.getElementById('msg'); 
+
+      // 메시지 스타일 초기화
+      msgDiv.classList.remove("success");
+      msgDiv.style.color = "red";
+
+      // formData 생성 (서버에 전송할 값)
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
+
+      try {
+        // 서버에 로그인 요청
+        const res = await fetch("/navigation/login", {
+          method: "POST",
+          body: formData
+        });
+        // 응답을 JSON 형태로 받음
+        const data = await res.json();
+        msgDiv.textContent = data.msg;
+
+        if (data.success) {
+          // 로그인 성공 시 JWT 토큰이 있으면 localStorage에 저장
+          if (data.token) {
+            localStorage.setItem("jwt_token", data.token);
+          }
+          msgDiv.textContent = "	ログイン成功！";
+          msgDiv.style.color = "green";
+          msgDiv.classList.add("success");
+          // 1초 후 버튼 페이지로 이동
+          setTimeout(() => {
+            window.location.href = "/static/button.html";
+          }, 1000);
+        } else {
+          // 로그인 실패 시
+          msgDiv.style.color = "red";
+          document.getElementById('signInPassword').value = ""; // 비밀번호 입력란 초기화
+        }
+      } catch (err) {
+        // 네트워크 또는 서버 연결 오류
+        msgDiv.textContent = "サーバー接続エラー！";
+        msgDiv.style.color = "red";
+      }
+    });
+  </script>
+</body>
+</html>
