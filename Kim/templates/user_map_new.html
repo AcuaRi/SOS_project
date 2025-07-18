@@ -92,7 +92,7 @@
         <input type="number" id="lon" placeholder="経度" step="any">
       </div>
       <div class="button-row">
-        <button id="search-btn">確認</button>
+        <button id="search-btn">位置更新</button>
         <button id="current-location">現在地</button>
       </div>
     </div>
@@ -225,7 +225,7 @@
                 <div class="hospital-item">
                   <strong>${h.name || '名称なし'}</strong><br>
                   位置: ${h.lat.toFixed(6)}, ${h.lon.toFixed(6)}<br>
-                  電話: ${h.phone || 'なし'}
+                  URL: ${h.phone || 'なし'}
                 </div>
               `).join("")
             : "<div class='hospital-item'>近くの病院が見つかりませんでした。</div>";
